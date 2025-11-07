@@ -1,0 +1,125 @@
+# =============================================================================
+# RSA Similarity Matrix Configuration
+# =============================================================================
+#
+# This configuration file controls the generation of Representational Similarity
+# Analysis (RSA) similarity matrices and Representational Dissimilarity Matrices
+# (RDMs) for model comparison.
+#
+# Purpose:
+# --------
+# Computes pairwise similarity between model representations using RSA to understand
+# how different models organize their representational spaces. This analysis is used
+# in Figure S6 and for Figure 4 to show how model representations relate to each other before and
+# after linear transformations.
+#
+# Workflow:
+# ---------
+# 1. Loads model features from two sources:
+#    - Original/raw features (untransformed model activations)
+#    - Post-transformation features (after applying learned linear transformations)
+# 2. Computes RDMs (Representational Dissimilarity Matrices) for each model
+#    - Uses Euclidean distance between feature vectors
+# 3. Computes similarity matrix by correlating RDMs between all model pairs
+#    - Uses correlation of covariances (corr_cov method)
+# 4. Saves results for visualization and analysis
+#
+# Output Files:
+# -------------
+# - rdms_{features_dim}_dim_{transformed_features_constraints}.hdf5
+#   Contains all individual model RDMs
+# - sim_{features_dim}_dim_{transformed_features_constraints}.nc
+#   Contains pairwise similarity matrix (NetCDF format for xarray)
+#
+# =============================================================================
+
+defaults:
+    - shared_args  # Import shared model lists and configurations
+
+# =============================================================================
+# Feature Configuration
+# =============================================================================
+
+# Dimensionality of features to analyze
+# Options:
+#   - "full": Use all feature dimensions from model representations
+#   - "PCA_500": Use 500 principal components (dimensionality reduction)
+features_dim: "full"
+
+# Transformation constraint type to analyze
+# This determines which linearly transformed features to load
+# Options:
+#   - "zero_shot": No transformation (W = I, identity matrix)
+#   - "diagonal": Diagonal transformation only (feature-wise scaling)
+#   - "Rectangular_N": Low-rank projection (e.g., Rectangular_30 for 30D)
+#   - "full_W": Full linear transformation (W ∈ ℝ^{p×p})
+# Note: Must match constraint types used during model evaluation
+transformed_features_constraints: "full_W"
+
+# =============================================================================
+# Path Configuration
+# =============================================================================
+
+# Output directory for RSA results
+# Structure: {save_path}/rdms_{features_dim}_dim_{constraints}.hdf5
+#            {save_path}/sim_{features_dim}_dim_{constraints}.nc
+# if we set include_new_models to be true, the output file names will be
+# Structure: {save_path}/rdms_{features_dim}_dim_{constraints}_additional_models.hdf5
+#            {save_path}/sim_{features_dim}_dim_{constraints}_additional_models.nc
+save_path: "Results/rsa"
+
+# Base directory containing saved model features on the THINGS dataset
+# This is essential to locate both original and transformed features to run this analysis
+# Subdirectories expected:
+#   - models_original_features/{features_dim}/
+#   - models_transformed_features/{features_dim}/{constraints}/
+models_features_path: "Data/models_features"
+
+# Path to VICE (human behavioral) features
+# VICE represents human similarity judgments and serves as a behavioral baseline
+# VICE features are compared against both raw and transformed model features
+vice_features_path: "Data/models_features/VICE_features"
+
+# =============================================================================
+# Model Selection
+# =============================================================================
+
+# Include additional models beyond the base 20 models
+# If True: Uses models + new_models from shared_args.yaml (total 30 models)
+# If False: Uses only base models list (20 models)
+# Note: All models must have features in both original and transformed directories
+include_new_models: False
+
+# =============================================================================
+# Notes for Users
+# =============================================================================
+#
+# Feature File Requirements:
+# --------------------------
+# - All model features must be saved as .pt files (PyTorch tensors)
+# - File naming: {model_name}.pt
+# - File location:
+#   * Raw (original features): Data/models_features/models_original_features/{features_dim}/
+#   * Transformed: Data/models_features/models_transformed_features/{features_dim}/{constraints}/
+#   * VICE: Data/models_features/VICE_features/VICE.pt
+#
+# Missing Models:
+# --------------
+# - Script validates that all models exist in both raw and transformed folders
+# - Models missing from either location are excluded with warning messages
+# - VICE is always included if VICE.pt exists
+#
+# Typical Usage:
+# -------------
+# python analysis_scripts/build_rsa_sim_matrix.py
+# python analysis_scripts/build_rsa_sim_matrix.py features_dim="PCA_500"
+# python analysis_scripts/build_rsa_sim_matrix.py transformed_features_constraints="diagonal"
+#
+# =============================================================================
+
+
+
+
+
+
+

@@ -1,0 +1,44 @@
+# Configuration for saving post-transformed features
+
+paths:
+  raw_features_dir: "Data/models_concepts_features/full"   # base dir containing raw features
+  models_dir: "Data/models_data_generating/full/full_W"  # dir with saved CogModel .pt files
+  transformed_out: "Data/models_concepts_features/transformed_full"     # base output dir
+
+
+models:
+  - "OpenCLIP_ConvNext_XL"
+  - "ALIGN"
+  - "FLAVA_Full"
+  - "SigLIP2_Base_P16_224"
+  - "AlexNet"
+  - "BLIP_2"
+  - "EVA02_CLIP_Enormous"
+  - "PE_Huge"
+  - "Image_Bind_Huge"
+  - "Clip_ViT_Large"
+  - "Google_ViT_Large"
+  - "BarlowTwins_RN50"
+  - "Beit_V2_Large"
+  - "ConvNext_Large"
+  - "Clip_RN50"
+  - "CORnet_S"
+  - "Deit3_Huge"
+  - "DINOv2_ViT_Large"
+  - "DenseNet201"
+  - "EfficientNet_B7"
+  - "Fair_Clip_ViT_Large"
+  - "Fair_SimCLR_ViT_Large"
+  - "Fair_SLIP_ViT_Large"
+  - "InceptionRN_V2"
+  - "Inception_V3"
+  - "ResNet50"
+  - "SWAV_RN50"
+  - "VicReg_RN50"
+  - "VGG19"
+  - "NASNet_Large"
+
+# Device preference
+device: "cuda"
+
+

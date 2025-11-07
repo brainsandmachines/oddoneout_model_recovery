@@ -1,0 +1,121 @@
+# =============================================================================
+# PREPROCESSING CONFIGURATION: THINGS Odd-One-Out Data Conversion
+# =============================================================================
+#
+# This configuration file controls the preprocessing of raw THINGS behavioral
+# data from CSV format to PyTorch tensors for efficient model training.
+#
+# Purpose:
+#   Convert human odd-one-out judgments from tabular CSV format to tensor format,
+#   with separation into training and noise ceiling test sets. This is the first
+#   preprocessing step required before any model evaluation or simulation.
+#
+# Usage:
+#   python analysis_scripts/odd_one_out_text_preprocess.py
+#
+# Override settings:
+#   python analysis_scripts/odd_one_out_text_preprocess.py \
+#       paths.behavior_csv="custom_path.csv"
+#
+# =============================================================================
+
+# =============================================================================
+# PATH CONFIGURATION
+# =============================================================================
+
+paths:
+  # --- Input: Raw THINGS behavioral data ---
+  # CSV file with columns: image1, image2, image3, choice, subject_id, noise_ceiling
+  # Indices are 1-based (1-1854), will be converted to 0-based (0-1853)
+  # Download from: https://osf.io/f5rn6/ (data/triplet_dataset/)
+  # THINGS images available at: https://osf.io/jum2f/
+  behavior_csv: "Data/Things_data/behavior_data/triplets_large_final_correctednc_correctedorder.csv"
+  
+  # --- Output: Preprocessed tensor directory ---
+  # All output tensors will be saved here
+  output_dir: "Data/Things_data_preprocessed/"
+  
+  # --- Output: Dataset summary statistics ---
+  # CSV file with triplet counts and unique image statistics per dataset
+  summary_csv: "Data/Things_data_preprocessed/things_datasets_info.csv"
+
+# =============================================================================
+# DATASET SPLIT CONFIGURATION
+# =============================================================================
+# The THINGS dataset is divided based on the 'noise_ceiling' column:
+#   - noise_ceiling = 0: Training set (~4.2M judgments)
+#   - noise_ceiling = 1: Test set 1 for noise ceiling estimation
+#   - noise_ceiling = 2: Test set 2 for noise ceiling estimation (primary)
+#   - noise_ceiling = 3: Test set 3 for noise ceiling estimation
+#
+# Each test set has multiple participants judging the same triplets, allowing
+# computation of inter-rater agreement (noise ceiling ≈ 67.8%)
+# =============================================================================
+
+dataset_splits:
+  train_set:
+    noise_ceiling_id: 0
+    description: "Main training set for model fitting"
+  
+  testset1_noise_ceiling:
+    noise_ceiling_id: 1
+    description: "Noise ceiling estimation set 1"
+  
+  testset2_noise_ceiling:
+    noise_ceiling_id: 2
+    description: "Primary noise ceiling validation set (used in paper)"
+  
+  testset3_noise_ceiling:
+    noise_ceiling_id: 3
+    description: "Noise ceiling estimation set 3"
+  
+  all:
+    noise_ceiling_id: "all"
+    description: "All judgments combined (train + all test sets)"
+
+# =============================================================================
+# OUTPUT TENSOR NAMING
+# =============================================================================
+# For each dataset split, three tensors are created:
+#   1) {dataset}_triplets.pt: [N×3] tensor of triplet image indices
+#   2) {dataset}_answers_positions.pt: [N] tensor of chosen positions (0/1/2)
+#   3) {dataset}_answers_image_index.pt: [N] tensor of chosen image IDs
+# =============================================================================
+
+output_tensors:
+  triplets_template: "Things_odd_one_out_triplets_{dataset}.pt"
+  positions_template: "Things_odd_one_out_answers_positions_{dataset}.pt"
+  image_indices_template: "Things_odd_one_out_answers_image_index_{dataset}.pt"
+
+# =============================================================================
+# INDEXING CONVENTION
+# =============================================================================
+# Input CSV uses 1-based indexing (images 1-1854)
+# Output tensors use 0-based indexing (images 0-1853)
+# This matches PyTorch convention and allows direct indexing into feature tensors
+# =============================================================================
+
+indexing:
+  input_base: 1   # CSV uses 1-based indexing
+  output_base: 0  # Tensors use 0-based indexing
+
+# =============================================================================
+# DATASET PARAMETERS
+# =============================================================================
+
+N_concepts: 1854  # Total number of unique images/concepts in THINGS dataset
+
+# =============================================================================
+# VALIDATION CHECKS
+# =============================================================================
+# Sanity checks performed during preprocessing:
+#   - Triplet indices match first 3 columns of image index array
+#   - Number of triplets equals number of answers
+#   - All indices are within valid range [0, N_concepts-1]
+#   - No NaN values in critical columns
+# =============================================================================
+
+validation:
+  check_index_ranges: true
+  check_tensor_shapes: true
+  verbose: true

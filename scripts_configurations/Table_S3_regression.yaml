@@ -1,0 +1,393 @@
+  # =============================================================================
+# Table S3 Regression Analysis Configuration
+# =============================================================================
+#
+# This configuration file controls the regression analysis for Table S3 in the
+# supplementary materials, which examines how neural network model properties
+# predict model recovery performance.
+#
+# Paper Context:
+# --------------
+# Table S3 presents a statistical analysis using ordinary least squares (OLS)
+# regression with bootstrap confidence intervals to identify which architectural
+# and representational properties of neural networks predict their performance
+# in cognitive model recovery tasks.
+#
+# Analysis Approach:
+# ------------------
+# 1. Predictor Variables: Model properties (n_params, embed_dim, effective
+#    dimensionality, embedding distances)
+# 2. Target Variable: accuracy_difference (self-prediction accuracy minus
+#    cross-prediction accuracy withing the model recovery simulations)
+# 3. Statistical Method: OLS regression with 10,000 bootstrap resamples
+# 4. Multiple Comparison Correction: Bonferroni correction for p-values
+#
+# Bootstrap Strategy:
+# -------------------
+# - Resamples models (not individual observations) to account for model-level
+#   clustering
+# - Generates stable confidence intervals for regression coefficients
+# - Computes two-tailed p-values from bootstrap distributions
+# - Filters reference models to match sampled data-generating models
+# - Excludes self-pairs (model predicting its own data)
+#
+# =============================================================================
+
+defaults:
+  - _self_
+
+# =============================================================================
+# Model Selection
+# =============================================================================
+# AUTOMATIC MODEL DISCOVERY:
+# --------------------------
+# The script automatically loads the complete list of models from the database.
+# This ensures consistency between the database and analysis, and eliminates
+# the need to manually maintain a models_list in the configuration.
+#
+# How it works:
+# 1. Script queries: SELECT DISTINCT data_generating_model FROM jobs
+# 2. Returns all unique models that have completed simulations
+# 3. Uses this list for both data_generating_models and reference_models
+#
+# Benefits:
+# - No manual model list maintenance
+# - Always matches what's in the database
+# - Automatically includes new models when database is updated
+# - Prevents errors from model name mismatches
+#
+# To use a SUBSET of models instead of all models in database:
+# -------------------------------------------------------------
+# Uncomment and modify the models_list below, then the script will use
+# only these models instead of auto-discovering from database:
+#
+# models_list:
+#   - "ResNet50"
+#   - "Google_ViT_Large"
+#   - "Clip_RN50"
+#   # Add more models as needed
+#
+# Leave commented (default) for automatic discovery from database.
+# =============================================================================
+
+# models_list: null  # Uncomment to manually specify models (overrides auto-discovery)
+
+# =============================================================================
+# Data Sources
+# =============================================================================
+# Paths to database and model properties files used in the analysis
+# =============================================================================
+
+# Path to SQLite database containing model recovery simulation results
+# Created by: experiment_scripts/create_simulations_db.py + run_simulations.py
+# Database schema:
+#   - jobs table: Simulation configurations
+#   - reference_model_results table: Recovery accuracy metrics
+# Used to extract: test_accuracy, train_accuracy, val_accuracy for each
+# (data_generating_model, reference_model, simulation_idx) combination
+db_path: "Results/Simulations_experiments/full_W/full_W.db"
+
+# Path to CSV file containing model properties
+# Created by: analysis_scripts/create_models_properties_table.py
+#
+# REQUIRED columns (must be present for analysis to run):
+#   - model_name: Model identifier (must match models in database)
+#   - n_params: Number of trainable parameters (ALWAYS REQUIRED)
+#
+# OPTIONAL columns (only needed if used in predictors list):
+#   - embed_dim: Feature embedding dimensionality
+#   - ED_pre: Effective dimensionality before alignment transformation
+#   - ED_post: Effective dimensionality after alignment transformation
+#   - pre_gride: GriDE dimensionality score before transformation
+#   - post_gride: GriDE dimensionality score after transformation
+#   - alignment_induced_shift: Distance between pre/post embeddings (cosine or RSA-based)
+#   - delta_ed(post-pre): Change in effective dimensionality
+#   - delta_gride: Change in GriDE dimensionality
+#
+# IMPORTANT: Metadata reliability
+# --------------------------------
+# For robust analysis:
+#   1. Always include n_params in predictors list
+#   2. Check that all models have valid (non-error) values for other predictors
+#   3. Or use models_list to include only models with complete data
+#
+models_data_table_path: "Results/models_properties_table/models_properties.csv"
+
+# =============================================================================
+# Simulation Parameters
+# =============================================================================
+# Configuration matching the database contents
+# =============================================================================
+
+# Number of independent simulation runs per model configuration
+# Each simulation uses a different random seed for triplet generation
+# More simulations = more robust bootstrap estimates
+# Must match what's in the database: query with
+#   SELECT COUNT(DISTINCT simulation_idx) FROM jobs WHERE n_train_triplets = 4200000;
+N_simulations: 30
+
+# Number of training triplets to analyze
+# Default: 4200000 (4.2M) - the maximum training set size in the database
+# This can be modified to analyze behavior at different data regimes:
+#   - 400: Early regime, high variance
+#   - 25600: Mid regime, convergence starting
+#   - 1638400: Late regime, near plateau
+#   - 4200000: Maximum data, best estimates
+N_triplets: 4200000
+
+# =============================================================================
+# Regression Predictors Configuration
+# =============================================================================
+# List of predictor variables to include in the regression analysis.
+# These are model properties from models_data_table_path CSV file.
+#
+# Active Predictors (used in main analysis):
+# -------------------------------------------
+# Each predictor must exist as a column in models_properties.csv
+# =============================================================================
+
+predictors:
+  - "n_params"                  # Number of model parameters
+  - "embed_dim"                 # Embedding dimension
+  - "alignment_induced_shift"   # Distance induced by alignment transformation
+  - "ED_pre"        # Effective dimensionality before transformation
+  - "ED_post"       # Effective dimensionality after transformation
+
+# Alternative Predictors (can be enabled by adding to list above):
+# -----------------------------------------------------------------
+# - "pre_gride"                 # GriDE dimensionality before transformation
+# - "post_gride"                # GriDE dimensionality after transformation
+# - "delta_ed(post-pre)"  # Change in effective dimensionality
+# - "pre_twonn"     # Two-nearest-neighbor dimensionality before
+# - "post_twonn"    # Two-nearest-neighbor dimensionality after
+# - "delta_gride"   # Change in GriDE dimensionality (post - pre)
+#
+# To use alternative predictors, modify the list above:
+# predictors:
+#   - "n_params"
+#   - "embed_dim"
+#   - "ED_pre"
+#   - "ED_post"
+
+# =============================================================================
+# Bootstrap Configuration
+# =============================================================================
+# Parameters for bootstrap resampling analysis
+# =============================================================================
+
+bootstrap:
+  n_boot: 10000                    # Number of bootstrap iterations
+  ci: 95                           # Confidence interval percentage
+  filter_reference_models: True    # Match reference models to sampled data-gen models
+  exclude_self_pairs: True         # Exclude model predicting its own data
+
+# =============================================================================
+# Output Configuration
+# =============================================================================
+# Controls where and how results are saved
+# =============================================================================
+
+output:
+  # Base directory for all regression analysis results
+  base_dir: "Results/regression_analysis"
+  
+  # Filename for the final results table (Table S3)
+  # This is the main output file containing regression coefficients, p-values,
+  # confidence intervals, and significance flags.
+  #
+  # Naming conventions:
+  # - Include analysis type: "regression_analysis"
+  # - Include predictors used: e.g., "gride" if using GriDE scores
+  # - Use descriptive suffixes: "_full", "_reduced", "_alternative"
+  #
+  # Examples:
+  #   regression_analysis_gride.csv       - Uses GriDE dimensionality scores
+  #   regression_analysis_effective_dim.csv - Uses effective dimensionality
+  #   regression_analysis_all_predictors.csv - Uses all available predictors
+  #   regression_analysis_minimal.csv     - Uses only n_params and embed_dim
+  #
+  # Why configurable?
+  # -----------------
+  # Different predictor combinations produce different results, and you want
+  # to save each analysis separately without overwriting previous results.
+  # This allows you to:
+  # 1. Compare results across different predictor sets
+  # 2. Keep a history of different analyses
+  # 3. Easily identify which analysis used which predictors
+  #
+  # Override from command line:
+  #   python Table_S3_regression.py output.results_filename="my_analysis.csv"
+  results_filename: "regression_analysis.csv"
+  
+  # Whether to save intermediate bootstrap files
+  # If True, saves:
+  #   - bootstrap_coefficients.csv (all 10,000 bootstrap estimates)
+  #   - bootstrap_pvalues.csv (all 10,000 p-values)
+  #   - bootstrap_summary.csv (summary statistics)
+  # If False, only saves the final results table
+  save_bootstrap_files: True
+
+# =============================================================================
+# Regression Analysis Parameters
+# =============================================================================
+# Target Variable: accuracy_difference
+# ------------------------------------
+# - Defined as: self_accuracy - test_accuracy
+# - self_accuracy: Model's accuracy predicting its own data
+# - test_accuracy: Model's accuracy predicting another model's data
+# - Positive values: Model is more specific to its own data
+# - Negative values: Model generalizes better to other models' data
+#
+# Predictor Variables:
+# --------------------
+# See "predictors" list above for active predictors.
+# All predictors are automatically standardized (zero mean, unit variance).
+#
+# Categorical Variables:
+# ----------------------
+# model_name is treated as categorical (one-hot encoded in regression)
+#
+# Output Directory:
+# -----------------
+# All results saved to: Results/regression_analysis/accuracy_difference/
+# Files created:
+#   - bootstrap_coefficients.csv: All bootstrap estimates
+#   - bootstrap_pvalues.csv: All bootstrap p-values
+#   - bootstrap_summary.csv: Summary statistics (mean, std, CI)
+#   - regression_analysis_gride.csv: MAIN RESULTS TABLE (Table S3)
+# =============================================================================
+
+# =============================================================================
+# Usage Examples
+# =============================================================================
+#
+# Default configuration (uses all parameters above):
+# ---------------------------------------------------
+# python Table_S3_regression.py
+#
+# Override number of simulations:
+# --------------------------------
+# python Table_S3_regression.py N_simulations=20
+#
+# Use different training set size:
+# --------------------------------
+# python Table_S3_regression.py N_triplets=1638400
+#
+# Use different database (if available):
+# ---------------------------------------
+# python Table_S3_regression.py db_path="Results/Simulations_experiments/full_W_PCA_500/full_W_PCA_500.db"
+#
+# Override models list (must be subset of available models):
+# -----------------------------------------------------------
+# python Table_S3_regression.py models_list='["ResNet50", "Google_ViT_Large", "Clip_RN50"]'
+#
+# =============================================================================
+
+# =============================================================================
+# Expected Outputs
+# =============================================================================
+#
+# Console Output:
+# ---------------
+# 1. OLS regression summary (from statsmodels)
+# 2. Variance Inflation Factors (VIF) table to check multicollinearity
+# 3. Bootstrap progress bar (10,000 iterations)
+#
+# Saved Files:
+# ------------
+# All files saved to: Results/regression_analysis/accuracy_difference/
+#
+# 1. bootstrap_coefficients.csv
+#    - All 10,000 bootstrap coefficient estimates
+#    - Columns: const, n_params_dg, n_params_ref, embed_dim_dg, ...
+#    - Rows: Bootstrap iteration index
+#
+# 2. bootstrap_pvalues.csv
+#    - All 10,000 bootstrap p-values
+#    - Same structure as coefficients
+#
+# 3. bootstrap_summary.csv
+#    - Summary statistics for each coefficient:
+#      * mean: Average across bootstrap samples
+#      * std: Standard deviation across samples
+#      * ci_lower: Lower 95% confidence bound
+#      * ci_upper: Upper 95% confidence bound
+#      * p_value_mean: Average p-value
+#      * p_value_std: Standard deviation of p-values
+#
+# 4. regression_analysis_gride.csv (MAIN RESULTS TABLE)
+#    - Final results table for Table S3:
+#      * predictor: Variable name
+#      * coefficient: OLS point estimate
+#      * bootstrap_p_value: Two-tailed p-value from bootstrap
+#      * corrected_p_value: Bonferroni-corrected p-value
+#      * ci_lower: Lower 95% CI
+#      * ci_upper: Upper 95% CI
+#      * reject: Boolean (True if significant after correction)
+#      * bootstrap_coef_mean: Mean bootstrap estimate
+#      * bootstrap_coef_std: Standard error from bootstrap
+#      * bootstrap_p_value_left: Left-tailed p-value
+#      * bootstrap_p_value_right: Right-tailed p-value
+#
+# =============================================================================
+
+# =============================================================================
+# Notes and Troubleshooting
+# =============================================================================
+#
+# Database Requirements:
+# ----------------------
+# - Must contain completed simulations (status='done' in jobs table)
+# - All models in models_list must appear as both data_generating_model and
+#   reference_model in the database
+# - At least N_simulations entries per model pair at N_triplets training size
+#
+# Model Properties Requirements:
+# ------------------------------
+# - All models in models_list must have entries in models_data_table_path CSV
+# - Missing property values will cause regression to fail
+# - NaN values in predictors are not handled - ensure complete data
+#
+# Memory Considerations:
+# ----------------------
+# - Bootstrap with 10,000 iterations can be memory-intensive
+# - Each iteration creates a weighted copy of the full results dataframe
+# - For debugging, reduce n_boot to 100 in the Python script
+# - Large model lists (>30 models) may require more RAM
+#
+# Common Errors:
+# --------------
+# 1. "KeyError: model_name not found in database"
+#    → Model in models_list is not in db_path database
+#    → Check: SELECT DISTINCT data_generating_model FROM jobs;
+#
+# 2. "ValueError: Input contains NaN"
+#    → Missing values in model properties CSV
+#    → Check: models_properties.csv has all required columns filled
+#
+# 3. "Empty bootstrap dataframe"
+#    → filter_reference_models=True but sampled models don't overlap
+#    → This is rare and usually skipped automatically with warning
+#
+# 4. Multicollinearity warnings (high VIF values)
+#    → Predictors are highly correlated (e.g., n_params and embed_dim)
+#    → Consider removing or combining correlated predictors
+#    → VIF > 10 indicates problematic multicollinearity
+#
+# Validation:
+# -----------
+# After running, check:
+# 1. VIF values < 10 for all predictors (printed to console)
+# 2. Bootstrap summary shows reasonable coefficient stability (std not too large)
+# 3. Final results table has corrected_p_value column with Bonferroni adjustment
+# 4. Confidence intervals don't cross zero for significant predictors
+#
+# Dependencies:
+# -------------
+# - tools/db_analysis.py: DBResultsAnalysis class
+# - statsmodels: OLS regression and statistical tests
+# - sklearn: StandardScaler for feature normalization
+# - pandas, numpy: Data manipulation
+# - tqdm: Progress bars for bootstrap
+#
+# =============================================================================

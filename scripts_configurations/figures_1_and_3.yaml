@@ -1,0 +1,400 @@
+# =============================================================================
+# Figures 1 and 3 Configuration - Model Recovery Analysis
+# =============================================================================
+#
+# This configuration file controls the generation of Figure 1 (model recovery
+# accuracy curves and confusion matrices) and Figure 3 (ranking analysis) from
+# the paper. 
+#
+# Paper Context:
+# --------------
+# Figure 1 demonstrates that model recovery accuracy plateaus below 80% even
+# with 4.2M training triplets, revealing fundamental identifiability issues
+# in flexible alignment metrics. Figure 3 analyzes when models fail to be
+# correctly identified, showing systematic ranking patterns.
+#
+# Figure 1 Components:
+# -------------------
+# - Panel A: Recovery accuracy vs. number of training triplets (line plot)
+# - Panels B-D: Confusion matrices at different training set sizes
+# - Color coding: Models grouped by training objective
+#
+# Figure 3 Components:
+# -------------------
+# - Panel A: Mean rank when correct model is recovered
+# - Panel B: Mean rank when wrong model is selected
+# - Statistical analysis: Ranking patterns reveal systematic confusions
+#
+# =============================================================================
+
+defaults:
+  - _self_
+  - figure_base     # Import font sizes, width settings, and formal names
+  - shared_args     # Import model lists, objectives, architecture
+
+# =============================================================================
+# Experiment Selection
+# =============================================================================
+
+# Which experiment configuration to use (see experiment definitions below)
+# Options: "full_W", "full_W_PCA_500", etc.
+experiment_name: "full_W"
+
+# =============================================================================
+# Figure Generation Control
+# =============================================================================
+# Control which figures to generate (useful for quick iterations or debugging)
+# =============================================================================
+
+create_figure_1: True   # Generate Figure 1 (recovery curves + confusion matrices)
+create_figure_3: True   # Generate Figure 3 (ranking analysis)
+
+# =============================================================================
+# Model Selection Logic (handled in Python script)
+# =============================================================================
+# NOTE: use_additional_models is now EXPERIMENT-SPECIFIC (see each experiment below)
+# 
+# Why experiment-specific?
+# ------------------------
+# Whether additional models (beyond the base 20) are available depends on what
+# was included when the simulation database was created. Each experiment's
+# database may have been run with:
+#   - Only 20 base models (use_additional_models: False)
+#   - All 30 models including new_models (use_additional_models: True)
+#
+# The flag is set per-experiment to match what's actually in the database.
+# Attempting to plot models that weren't included in simulations will fail.
+#
+# Model Selection Process:
+# - Models are selected from cfg.models (20) or cfg.models + cfg.new_models (30)
+# - Model ordering is derived from cfg.models_objective dictionary keys
+# - Automatically groups by training objective: Supervised → Self-supervised → Multimodal
+# - Color counts are computed dynamically from models_objective dictionary
+# - No hardcoded model lists or color counts in this configuration file
+
+# =============================================================================
+# Color Legend Configuration
+# =============================================================================
+# Gradient color legends populated at runtime with cubehelix palettes
+# Structure is defined here but colors are computed in the Python script
+# =============================================================================
+
+legend_gradient_dict:
+  "Supervised": ~              # Populated with supervised model color gradient
+  "Self-supervised": ~         # Populated with self-supervised model color gradient
+  "Image & Text Alignment": ~  # Populated with multimodal model color gradient
+
+# =============================================================================
+# Experiment Database Files
+# =============================================================================
+# Each experiment points to a different SQLite database containing model
+# recovery simulation results. These databases are created by:
+# 1. experiment_scripts/create_simulations_db.py - Creates database schema and jobs
+# 2. run_simulations.py - Executes simulations and populates results
+#
+# Database Structure:
+# -------------------
+# - jobs table: Simulation configurations
+#   * id, n_train_triplets, simulation_idx, data_generating_model,
+#     constraint_type, regularization_type, status, start_time, finish_time
+#
+# - reference_model_results table: Recovery accuracy metrics
+#   * job_id, reference_model, test_accuracy, train_accuracy, val_accuracy,
+#     test_NLL, chosen_regularization_constant
+#
+# Experiment Naming Convention:
+# ------------------------------
+# - "full_W": Full unconstrained transformation matrix W ∈ ℝ^{p×p}
+# - "PCA_500": Features reduced to 500 dimensions via PCA before transformation
+#
+# Database File Locations:
+# ------------------------
+# Results/Simulations_experiments/{experiment_type}/{experiment_type}.db
+#
+# Current Available Experiments:
+# ------------------------------
+# Currently configured experiments include:
+# - "full_W": Full W matrix transformation (no dimensionality reduction)
+# - "full_W_PCA_500": Full W matrix on PCA-reduced features (500 dimensions)
+#
+# Both experiments use the same full_W constraint (unconstrained transformation matrix)
+# but differ in whether features are reduced via PCA before transformation.
+# This allows comparison of model recovery with and without dimensionality reduction.
+#
+# How to Add New Experiments:
+# ----------------------------
+# You can add additional experiments by:
+# 1. Create database:
+#    python experiment_scripts/create_simulations_db.py experiment_type=my_experiment #configure my_experiment in create_simulations_db.yaml first!
+#
+# 2. Run simulations:
+#    python run_simulations.py experiment_type=my_experiment #configure my_experiment in run_simulations.yaml first!
+#
+# 3. Add experiment configuration below with db_path, N_simulations, and n_triplets
+#
+# 4. Generate figures:
+#    python create_Figures_1_and_3.py experiment_name="my_experiment"
+
+# =============================================================================
+
+# Experiment Configurations
+# ==========================
+# Each experiment specifies:
+# - db_path: Path to SQLite database with simulation results
+# - use_additional_models: Whether this experiment includes all 30 models or just 20
+# - N_simulations: Number of independent simulation runs per configuration
+# - n_triplets: List of training set sizes (number of triplets) to analyze
+#
+# IMPORTANT: use_additional_models must match what was used when creating the database!
+# =============================================================================
+
+"full_W":
+  db_path: "Results/Simulations_experiments/full_W/full_W.db"
+  use_additional_models: False  # This experiment uses only 20 base models
+  N_simulations: 30
+  n_triplets: [
+      50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600,
+      51200, 102400, 204800, 409600, 819200, 1638400, 3276800, 4200000
+  ]
+
+"full_W_PCA_500":
+  db_path: "Results/Simulations_experiments/full_W_PCA_500/full_W_PCA_500.db"
+  use_additional_models: False  # This experiment uses only 20 base models
+  N_simulations: 30
+  n_triplets: [
+      50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600,
+      51200, 102400, 204800, 409600, 819200, 1638400, 3276800, 4200000
+  ]
+
+
+
+# =============================================================================
+# Figure 1 Layout Settings
+# =============================================================================
+# Defines precise panel arrangement using matplotlib GridSpec
+# All dimensions and ratios carefully tuned for publication quality
+# =============================================================================
+
+Figures_settings_dict:
+  Figure_1:
+    CI: True                    # Show confidence intervals on line plots
+    width_cm: 13.97             # Figure width (matches journal column width)
+    height_cm: 11.3             # Figure height
+    
+    # GridSpec configuration for panel layout
+    gridspec_dict:
+      nrows: 7
+      ncols: 10
+      width_ratios: [0.9675, 1.15, 3.15, 0.3, 3.15, 0.3, 3.15, 0.5675, 0.5675, 0.5675]
+      height_ratios: [0.8833333, 3.4833333, 1.5833333, 0.5333333, 3.15, 1.5833333, 0.0833333]
+
+    # Subplot positioning in grid
+    subplots_dict:
+      model_recovery_n_triplets:
+        height_index: 1
+        width_index: [1, 2, 3, 4, 5, 6, 7, 8]
+      conf_matrix_small:
+        height_index: 4
+        width_index: 2
+      conf_matrix_medium:
+        height_index: 4
+        width_index: 4
+      conf_matrix_large:
+        height_index: 4
+        width_index: 6
+      colorbar:
+        height_index: 4
+        width_index: 8
+    
+    # Training set sizes for confusion matrices
+    conf_size_dict:
+      small: 400
+      medium: 25600
+      large: 1638400
+    
+    # Line plot annotation labels (K = thousands, M = millions)
+    line_plot_letters_labels_dict:
+      "400": "B"
+      "25.6K": "C"
+      "1.6M": "D"
+    
+    # Panel letters positioning
+    panel_letters_dict:
+      line_plot:
+        letter: "A"
+        position: [-0.07, 1.12]
+        fontsize: 10
+        weight: "bold"
+      conf_matrix_small:
+        letter: "B"
+        position: [-1, 1]
+        fontsize: 10
+        weight: "bold"
+      conf_matrix_medium:
+        letter: "C"
+        position: [-0.3, 1]
+        fontsize: 10
+        weight: "bold"
+      conf_matrix_large:
+        letter: "D"
+        position: [-0.3, 1]
+        fontsize: 10
+        weight: "bold"
+
+  # ===========================================================================
+  # Figure 3 Layout Settings
+  # ===========================================================================
+  # Ranking analysis showing mean rank when correct vs. incorrect
+  # ===========================================================================
+  
+  Figure_3:
+    width_cm: 13.97
+    height_cm: 6
+    training_triplets_N: 4200000  # Maximum training set size for analysis
+    
+    # GridSpec configuration
+    gridspec_dict:
+      nrows: 3
+      ncols: 5
+      height_ratios: [0.5, 4, 0.5]
+      width_ratios: [2.3, 4.1, 3, 4.1, 0.5]
+
+    # Subplot positioning
+    subplots_dict:
+      mean_rank_correct:
+        height_index: 1
+        width_index: 1
+      mean_rank_opposite:
+        height_index: 1
+        width_index: 3
+
+    # Panel letters positioning
+    panel_letters_dict:
+      mean_rank_correct:
+        letter: "A"
+        position: [-14.5, 31]
+        fontsize: 8
+        weight: "bold"
+      mean_rank_opposite:
+        letter: "B"
+        position: [-14.5, 31]
+        fontsize: 8
+        weight: "bold"
+     
+  # ===========================================================================
+  # Precision/Recall Bar Plot Settings (Supplementary Figure)
+  # ===========================================================================
+  
+  precision_recall_bar_plots_kwargs:
+    height_cm: 8
+    width_cm: 5
+    panel_letter: "B"
+
+    gridspec_dict:
+      nrows: 5
+      ncols: 5
+      height_ratios: [0.8, 6, 0.3, 3, 0.8]
+      width_ratios: [1.8, 4, 1, 4, 0.8]
+
+    subplots_dict:
+      cnn_precision:
+        height_index: 1
+        width_index: 1
+      cnn_recall:
+        height_index: 1
+        width_index: 3
+      transformer_precision:
+        height_index: 3
+        width_index: 1
+      transformer_recall:
+        height_index: 3
+        width_index: 3
+
+# =============================================================================
+# Additional Figure Settings
+# =============================================================================
+# Settings for supplementary figures and analyses
+# These are used by other analysis scripts, not by create_Figures_1_and_3.py
+# Note: model_arch_dict has been removed - use cfg.architecture_dict from shared_args.yaml instead
+# =============================================================================
+
+all_models_metrics_plots_kwargs:
+  width_cm: 10
+  height_cm: 8
+  precision_panel_letter: "A"
+  recall_panel_letter: "B"
+  accuracy_panel_letter: "C"
+  f1_panel_letter: "D"
+
+MRR_plot_kwargs:
+  width_cm: 8
+  height_cm: 5
+  panel_letter: "A"
+  
+  gridspec_dict:
+    nrows: 5
+    ncols: 4
+    height_ratios: [1, 2.8, 0.1, 1.4, 0.7]
+    width_ratios: [1, 1, 6, 1]
+    
+  subplots_dict:
+    cnn:
+      height_index: 1
+      width_index: 2
+    transformer:
+      height_index: 3
+      width_index: 2
+
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# Configuration Usage:
+# -------------------
+# # Default: Experiment "full_W" with its configured models (20 base models)
+# python create_Figures_1_and_3.py
+#
+# # Different experiment (PCA-reduced features, also 20 models by default)
+# python create_Figures_1_and_3.py experiment_name="full_W_PCA_500"
+#
+# # Override use_additional_models (only if database actually has 30 models!)
+# python create_Figures_1_and_3.py experiment_name="full_W" \
+#     full_W.use_additional_models=True
+#
+# # Generate only Figure 1 (skip Figure 3)
+# python create_Figures_1_and_3.py create_figure_3=False
+#
+# Key Parameters to Modify:
+# -------------------------
+# - experiment_name: Switch between different experiment datasets (different DBs)
+# - {experiment}.use_additional_models: Per-experiment toggle for 20 vs 30 models
+#   IMPORTANT: This must match what was used when creating the simulation database!
+# - create_figure_1, create_figure_3: Control which figures to generate
+# - Figures_settings_dict: Modify panel layouts and sizes
+#
+# Model Selection Details:
+# -------------------------
+# The script automatically:
+# - Reads use_additional_models from the selected experiment's configuration
+# - Selects models: cfg.models (20) or cfg.models + cfg.new_models (30)
+# - Derives model ordering from cfg.models_objective dictionary
+# - Computes color counts from objectives (no hardcoding)
+# - Filters formal_names_dict and architecture_dict to match selected models
+# - Assigns colors using cubehelix palettes (same logic as create_Figure_2.py)
+#
+# Why use_additional_models is Experiment-Specific:
+# --------------------------------------------------
+# Each simulation database was created with either 20 or 30 models. The flag
+# must match what's in the database, or plotting will fail. For example:
+# - full_W database: Contains only 20 models → use_additional_models: False
+# - full_W_all database: Contains 30 models → use_additional_models: True
+# You cannot plot 30 models from a database that only has 20!
+#
+# Dependencies:
+# -------------
+# - shared_args.yaml: Model lists (models, new_models), objectives, architecture
+# - figure_base.yaml: Font sizes, width settings, formal names
+# - Database files: Must exist at paths specified in experiment configurations
+# - tools/db_analysis.py: DBResultsAnalysis and ModelRecoveryVisualizer classes
+#
+# =============================================================================

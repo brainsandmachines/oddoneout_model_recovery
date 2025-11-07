@@ -1,0 +1,157 @@
+# =============================================================================
+# ANALYSIS CONFIGURATION: THINGS Noise Ceiling Evaluation
+# =============================================================================
+#
+# This configuration file controls the computation of human noise ceiling for
+# the THINGS odd-one-out dataset using leave-one-out cross-validation.
+#
+# Purpose:
+#   Quantify human inter-rater agreement on odd-one-out triplet judgments to
+#   establish the performance upper bound for computational models. The noise
+#   ceiling represents the maximum achievable accuracy given inherent human
+#   variability in similarity judgments.
+#
+# Usage:
+#   python analysis_scripts/things_noise_ceiling_eval.py
+#
+# Override settings:
+#   python analysis_scripts/things_noise_ceiling_eval.py \
+#       paths.output_dir="custom_results_path"
+#
+# =============================================================================
+
+# =============================================================================
+# PATH CONFIGURATION
+# =============================================================================
+
+paths:
+  # --- Input: Preprocessed triplet tensors ---
+  # Created by odd_one_out_text_preprocess.py
+  # Each test set has multiple participants judging same triplets
+  triplets:
+    test1: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_testset1_noise_ceiling.pt"
+    test2: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_testset2_noise_ceiling.pt"
+    test3: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_testset3_noise_ceiling.pt"
+  
+  # --- Input: Answer position tensors ---
+  # Indicates which position (0, 1, or 2) was chosen as odd-one-out
+  answers:
+    test1: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_testset1_noise_ceiling.pt"
+    test2: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_testset2_noise_ceiling.pt"
+    test3: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_testset3_noise_ceiling.pt"
+  
+  # --- Input: Raw behavioral data ---
+  # Used to extract subject_id for participant counting
+  # Download from: https://osf.io/f5rn6/ (data/triplet_dataset/)
+  behavior_csv: "Data/Things_data/behavior_data/triplets_large_final_correctednc_correctedorder.csv"
+  
+  # --- Output: Unique triplets and response counts ---
+  # Aggregated data showing how many times each choice was selected per triplet
+  output_dir: "Data/Things_data_preprocessed/unique_triplets_and_counts/"
+  
+  # --- Output: Analysis summary ---
+  # CSV with noise ceiling values, participant counts, and statistics per test set
+  summary_csv: "Data/Things_data_preprocessed/unique_triplets_and_counts/analysis_noise_ceiling.csv"
+
+# =============================================================================
+# OUTPUT TENSORS
+# =============================================================================
+# For each test set and combined "all tests", saves:
+#   - {test}_unique_triplets.pt: Unique triplets after normalizing orderings
+#   - {test}_answers_counts.pt: [U×3] counts of choices for each unique triplet
+#     where U = number of unique triplets
+# =============================================================================
+
+output_files:
+  # Test set 1
+  test1_triplets: "test_1_unique_triplets.pt"
+  test1_counts: "test_1_answers_counts.pt"
+  
+  # Test set 2 (PRIMARY: used for all noise ceiling values reported in paper)
+  test2_triplets: "test_2_unique_triplets.pt"
+  test2_counts: "test_2_answers_counts.pt"
+  
+  # Test set 3
+  test3_triplets: "test_3_unique_triplets.pt"
+  test3_counts: "test_3_answers_counts.pt"
+  
+  # All test sets combined
+  all_triplets: "all_tests_unique_triplets.pt"
+  all_counts: "all_tests_answers_counts.pt"
+
+# =============================================================================
+# NOISE CEILING METHODOLOGY
+# =============================================================================
+# Two methods are computed:
+#
+# 1) Simple Noise Ceiling:
+#    For each unique triplet, compute fraction agreeing with majority vote.
+#    Averaged across all triplets.
+#
+# 2) Leave-One-Out Noise Ceiling (used in paper):
+#    For each triplet with response counts [c0, c1, c2]:
+#      - For each response that was given:
+#        * Remove that response from counts
+#        * Check if it agrees with majority of remaining responses
+#        * Weight by frequency of that response
+#    This provides a more robust estimate of human consistency.
+#
+# Typical THINGS odd-one-out noise ceiling: ~67-68%
+# =============================================================================
+
+noise_ceiling_method: "leave_one_out"  # Options: "simple", "leave_one_out", "both"
+
+# =============================================================================
+# TRIPLET NORMALIZATION
+# =============================================================================
+# Different orderings of the same triplet are treated as identical:
+#   [1, 2, 3], [3, 2, 1], [2, 1, 3] all represent the same triplet
+#
+# Normalization procedure:
+#   1) Sort concept indices within each triplet: [1, 2, 3]
+#   2) Update answer positions to match sorted order
+#   3) Aggregate response counts across all orderings
+# =============================================================================
+
+normalize_triplets: true
+
+# =============================================================================
+# ANALYSIS METRICS COMPUTED
+# =============================================================================
+# For each test set, the summary CSV includes:
+#   - N_unique_triplets: Number of distinct triplets (after normalization)
+#   - average_answers_per_triplet: Mean number of participants per triplet
+#   - N_participants: Total unique participants in test set
+#   - leave_one_out_noise_ceiling_mean: Mean LOO accuracy
+#   - leave_one_out_noise_ceiling_std: Standard deviation across triplets
+# =============================================================================
+
+metrics_to_compute:
+  - "N_unique_triplets"
+  - "average_answers_per_triplet"
+  - "N_participants"
+  - "leave_one_out_noise_ceiling_mean"
+  - "leave_one_out_noise_ceiling_std"
+
+# =============================================================================
+# DATASET PARAMETERS
+# =============================================================================
+
+N_concepts: 1854  # Total number of unique images/concepts in THINGS
+
+# =============================================================================
+# EXPECTED RESULTS
+# =============================================================================
+# Typical noise ceiling values for THINGS odd-one-out task:
+#   - Test set 1: ~67.5%
+#   - Test set 2: ~67.8% ⭐ PRIMARY - All paper results use this value
+#   - Test set 3: ~68.2%
+#   - All tests combined: ~67.5%
+#
+# Test set 2 is the PRIMARY validation benchmark used throughout the paper.
+# All model performance comparisons and noise ceiling references in figures
+# and tables are based on test set 2 values.
+#
+# These values set the upper bound for model performance, as they represent
+# the level of agreement among human participants.
+# =============================================================================

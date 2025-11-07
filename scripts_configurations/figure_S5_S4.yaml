@@ -1,0 +1,45 @@
+defaults:
+  - figure_base # import base figure settings
+  - shared_args # import shared arguments (contains models list, etc.)
+
+# Figure Specific Settings
+# ----------------------------------------------------------------------------
+save_folder: "Plots/S4_S5_30_models_Recovery"
+# Database path
+db_path: "Results/Simulations_experiments/full_W_30_models/full_W_30_models.db"
+
+# Number of triplets list
+n_triplets_list: [100, 400, 1600, 6400, 25600, 51200, 204800, 819200, 1638400, 4200000]
+
+
+models_architecture:
+  ResNet50: CNN
+  VGG19: CNN
+  DenseNet201: CNN
+  ConvNext_Large: CNN
+  EfficientNet_B7: CNN
+  NASNet_Large: CNN
+  CORnet_S: CNN
+  AlexNet: CNN
+  InceptionRN_V2: CNN
+  Inception_V3: CNN
+  Google_ViT_Large: ViT
+  Deit3_Huge: ViT
+  Beit_V2_Large: ViT
+  DINOv2_ViT_Large: ViT
+  Fair_SimCLR_ViT_Large: ViT
+  BarlowTwins_RN50: CNN
+  SWAV_RN50: CNN
+  VicReg_RN50: CNN
+  Fair_Clip_ViT_Large: ViT
+  Fair_SLIP_ViT_Large: ViT
+  Clip_RN50: CNN
+  OpenCLIP_ConvNext_XL: CNN
+  ALIGN: CNN
+  FLAVA_Full: ViT
+  SigLIP2_Base_P16_224: ViT
+  BLIP_2: ViT
+  EVA02_CLIP_Enormous: ViT
+  PE_Huge: ViT
+  Image_Bind_Huge: ViT
+  Clip_ViT_Large: ViT

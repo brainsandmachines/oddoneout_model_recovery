@@ -1,0 +1,39 @@
+axis_labels_fontsize: 8
+tick_labels_fontsize: 5
+width_size_figure: 13.97
+half_width_size_figure: 6.985
+panel_letter_fontsize: 10
+legend_fontsize: 4
+
+formal_names_dict:
+  Google_ViT_Large: ViT L/16
+  Deit3_Huge: DeiT3 H
+  Beit_V2_Large: BEiTv2 L
+  DINOv2_ViT_Large: DINOv2 L
+  Fair_SimCLR_ViT_Large: Meta AI SimCLR L
+  Fair_Clip_ViT_Large: Meta AI CLIP L
+  Fair_SLIP_ViT_Large: Meta AI SLIP L
+  ResNet50: ResNet50
+  VGG19: VGG19
+  DenseNet201: DenseNet201
+  ConvNext_Large: ConvNext L
+  EfficientNet_B7: EfficientNet B7
+  NASNet_Large: NASNet L
+  CORnet_S: CORnet S
+  InceptionRN_V2: InceptionRNv2
+  Inception_V3: Inceptionv3
+  AlexNet: AlexNet
+  BarlowTwins_RN50: BarlowTwins RN50
+  SWAV_RN50: SWAV RN50
+  VicReg_RN50: VicReg RN50
+  Clip_RN50: OpenAI CLIP RN50
+  OpenCLIP_ConvNext_XL: OpenCLIP ConvNext XL
+  ALIGN: ALIGN
+  FLAVA_Full: FLAVA Full
+  SigLIP2_Base_P16_224: SigLIP2 B
+  BLIP_2: BLIP 2
+  EVA02_CLIP_Enormous: EVA02 CLIP E
+  PE_Huge: PE Huge
+  Image_Bind_Huge: Image Bind H
+  Clip_ViT_Large: OpenAI CLIP ViT L
+    

@@ -1,0 +1,169 @@
+# =============================================================================
+# Shared Model Lists for Simulation Experiments
+# =============================================================================
+#
+# This configuration file defines the neural network models names  used across different
+# experiments. It provides two lists:
+# 1. models: Base set of 20 models used in most experiments
+# 2. new_models: Additional 10 models added for extended comparisons showed in figure S4 and S5
+# We extracted the models most represntational layer activation for the THINGS dataset.
+# These lists are imported by create_simulations_db.yaml using Hydra's
+# composition feature (defaults: - shared_args)
+#
+# Model Selection Criteria:
+# - Diverse architectures: CNNs (ResNet, VGG, etc.), Transformers (ViT, BERT-like)
+# - Different training objectives: Supervised, self-supervised (DINO, CLIP, etc.)
+# - Various model sizes: From AlexNet to Huge transformers
+# - Multiple training datasets and protocols
+#
+# =============================================================================
+
+# Base models - used in most experiments (20 models)
+# These represent a diverse set of vision models with different architectures
+# and training paradigms
+models:
+    - "BarlowTwins_RN50"        # Self-supervised: Barlow Twins objective
+    - "Beit_V2_Large"            # Masked image modeling transformer
+    - "ConvNext_Large"           # Modern CNN architecture
+    - "Clip_RN50"                # Vision-language model (OpenAI CLIP)
+    - "CORnet_S"                 # Brain-inspired recurrent CNN
+    - "Deit3_Huge"               # Data-efficient image transformer
+    - "DINOv2_ViT_Large"         # Self-supervised vision transformer
+    - "DenseNet201"              # Densely connected CNN
+    - "EfficientNet_B7"          # Compound scaled efficient architecture
+    - "Fair_Clip_ViT_Large"      # CLIP variant (Meta AI)
+    - "Fair_SLIP_ViT_Large"      # Self-supervised learning with image-text pairs
+    - "Fair_SimCLR_ViT_Large"    # SimCLR with vision transformer
+    - "Google_ViT_Large"         # Original vision transformer (Google)
+    - "InceptionRN_V2"           # Inception-ResNet hybrid
+    - "Inception_V3"             # Inception architecture
+    - "ResNet50"                 # Standard ResNet baseline
+    - "SWAV_RN50"                # SwAV self-supervised learning
+    - "VicReg_RN50"              # Variance-Invariance-Covariance regularization
+    - "VGG19"                    # Classic deep CNN
+    - "NASNet_Large"             # Neural architecture search model
+
+# Additional models - included when include_additional_models=True (10 models)
+# These were added later to extend the model comparison
+new_models:
+    - "OpenCLIP_ConvNext_XL"     # Open-source CLIP with ConvNext
+    - "ALIGN"                    # Vision-language model (Google)
+    - "FLAVA_Full"               # Foundational language and vision alignment
+    - "SigLIP2_Base_P16_224"     # Sigmoid loss CLIP variant
+    - "AlexNet"                  # Historic CNN baseline
+    - "BLIP_2"                   # Bootstrapping language-image pretraining
+    - "EVA02_CLIP_Enormous"      # Large-scale CLIP variant
+    - "PE_Huge"                  # Preceptuion encoder
+    - "Image_Bind_Huge"          # Multi-modal binding model
+    - "Clip_ViT_Large"           # CLIP with ViT backbone
+    
+
+
+models_objective:
+  ResNet50: Supervised
+  VGG19: Supervised
+  DenseNet201: Supervised
+  ConvNext_Large: Supervised
+  EfficientNet_B7: Supervised
+  NASNet_Large: Supervised
+  CORnet_S: Supervised
+  AlexNet: Supervised
+  InceptionRN_V2: Supervised
+  Inception_V3: Supervised
+  Google_ViT_Large: Supervised
+  Deit3_Huge: Supervised
+  Beit_V2_Large: Self-supervised
+  DINOv2_ViT_Large: Self-supervised
+  Fair_SimCLR_ViT_Large: Self-supervised
+  BarlowTwins_RN50: Self-supervised
+  SWAV_RN50: Self-supervised
+  VicReg_RN50: Self-supervised
+  Fair_Clip_ViT_Large: Image & Text Alignment
+  Fair_SLIP_ViT_Large: Image & Text Alignment
+  Clip_RN50: Image & Text Alignment
+  OpenCLIP_ConvNext_XL: Image & Text Alignment
+  ALIGN: Image & Text Alignment
+  FLAVA_Full: Image & Text Alignment
+  SigLIP2_Base_P16_224: Image & Text Alignment
+  BLIP_2: Image & Text Alignment
+  EVA02_CLIP_Enormous: Image & Text Alignment
+  PE_Huge: Image & Text Alignment
+  Image_Bind_Huge: Image & Text Alignment
+  Clip_ViT_Large: Image & Text Alignment
+
+
+formal_names_dict: 
+    # Transformer-based models
+    ## Supervised models
+    'Google_ViT_Large': 'ViT L/16' 
+    'Deit3_Huge': 'DeiT3 H'   
+    'Beit_V2_Large': 'BEiTv2 L'   # Self-supervised task and fine-tuning on downstream tasks 
+    ## Self-supervised models
+    'DINOv2_ViT_Large': 'DINOv2 L'   
+    'Fair_SimCLR_ViT_Large': 'Meta AI SimCLR L' 
+    ## Multimodal models
+    'Fair_Clip_ViT_Large': 'Meta AI CLIP L'
+    'Fair_SLIP_ViT_Large': 'Meta AI SLIP L' 
+    # CNN-based models
+    ## Supervised models
+    'ResNet50': 'ResNet50'         
+    'VGG19': 'VGG19'            
+    'DenseNet201': 'DenseNet201'     
+    'ConvNext_Large': 'ConvNext L'
+    'EfficientNet_B7': 'EfficientNet B7'   
+    'NASNet_Large': 'NASNet L'     
+    'CORnet_S': 'CORnet S'         
+    'InceptionRN_V2': 'InceptionRNv2'    
+    'Inception_V3': 'Inceptionv3' 
+    "AlexNet": "AlexNet"
+    ## Self-supervised models
+    'BarlowTwins_RN50': 'BarlowTwins RN50'  
+    #'MoCo_V2_RN50': 'MoCoV2 RN50'      
+    'SWAV_RN50': 'SWAV RN50'         
+    'VicReg_RN50': 'VicReg RN50'             
+    ## Multimodal models
+    'Clip_RN50': 'OpenAI CLIP RN50'    
+    "OpenCLIP_ConvNext_XL": "OpenCLIP ConvNext XL"
+    "ALIGN": "ALIGN"
+    "FLAVA_Full": "FLAVA Full"
+    "SigLIP2_Base_P16_224": "SigLIP2 B"
+    "BLIP_2": "BLIP 2"
+    "EVA02_CLIP_Enormous": "EVA02 CLIP E"
+    "PE_Huge": "PE Huge"
+    "Image_Bind_Huge": "Image Bind H"
+    "Clip_ViT_Large": "OpenAI CLIP ViT L"
+
+
+architecture_dict:
+    # Transformer-based models
+    'Google_ViT_Large': 'Transformer'
+    'Deit3_Huge': 'Transformer'
+    'Beit_V2_Large': 'Transformer'
+    'DINOv2_ViT_Large': 'Transformer'
+    'Fair_SimCLR_ViT_Large': 'Transformer'
+    'Fair_Clip_ViT_Large': 'Transformer'
+    'Fair_SLIP_ViT_Large': 'Transformer'
+    'ALIGN': 'Transformer'
+    'FLAVA_Full': 'Transformer'
+    'SigLIP2_Base_P16_224': 'Transformer'
+    'BLIP_2': 'Transformer'
+    'EVA02_CLIP_Enormous': 'Transformer'
+    'PE_Huge': 'Transformer'
+    'Image_Bind_Huge': 'Transformer'
+    'Clip_ViT_Large': 'Transformer'
+    # CNN-based models
+    'ResNet50': 'CNN'
+    'VGG19': 'CNN'
+    'DenseNet201': 'CNN'
+    'ConvNext_Large': 'CNN'
+    'EfficientNet_B7': 'CNN'
+    'NASNet_Large': 'CNN'
+    'CORnet_S': 'CNN'
+    'InceptionRN_V2': 'CNN'
+    'Inception_V3': 'CNN'
+    'BarlowTwins_RN50': 'CNN'
+    'SWAV_RN50': 'CNN'
+    'VicReg_RN50': 'CNN'
+    'Clip_RN50': 'CNN'
+    'OpenCLIP_ConvNext_XL': 'CNN'
+    'AlexNet': 'CNN'

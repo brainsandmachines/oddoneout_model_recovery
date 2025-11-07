@@ -1,0 +1,280 @@
+# =============================================================================
+# Run Simulations Configuration for Model Recovery Experiments
+# =============================================================================
+#
+# This configuration file defines the runtime parameters for executing model
+# recovery simulations. Each experiment type corresponds to a database created
+# by create_simulations_db.py and specifies where to find:
+# 1. Pre-trained data-generating models (fitted CogModels)
+# 2. Neural network features for data generation and reference models
+# 3. The simulation database with pending jobs
+#
+# CRITICAL PATHS ALIGNMENT:
+# - Paths must match the Data folder structure created by create_data_generating_models.py
+# - data_generating_models: Points to saved CogModel .pkl files
+# - features folders: Point to neural network features (.pt files)
+# - db_file_name: Must match the database created by create_simulations_db.py
+#
+# WORKFLOW:
+# 1. create_data_generating_models.py creates CogModels → saves to data_generating_models path
+# 2. create_simulations_db.py creates job database → saves to db_file_name
+# 3. run_simulations.py (this config) loads models and executes jobs
+#
+# Usage:
+#   python run_simulations.py experiment_type=<experiment_name>
+#
+# =============================================================================
+defaults:
+  - shared_args # import shared arguments (contains models list, etc.)
+
+# Default experiment type - override with experiment_type=<name>
+experiment_type: "full_W_PCA_500"
+
+# Base folder for all simulation results
+db_folder: "Results/Simulations_experiments/"
+
+
+# =============================================================================
+# EXPERIMENT: full_W_PCA_500
+# =============================================================================
+# Runs simulations using PCA-reduced features (500 dimensions).
+# This tests whether dimensionality reduction affects model recovery.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/PCA_500/*.pt
+# 2. Models: Data/models_data_generating/PCA_500/model_full_W/*.pkl
+# 3. Database: Results/Simulations_experiments/full_W_PCA_500/full_W_PCA_500.db
+# =============================================================================
+"full_W_PCA_500":
+  paths:
+    data_generating_models: "Data/models_data_generating/PCA_500/models_full_W"
+    data_generating_features_folder: "Data/models_features/models_original_features/PCA_500"
+    reference_models_features_folder: "Data/models_features/models_original_features/PCA_500"
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "full_W_PCA_500.db"  
+
+  experiment:
+    used_additional_models: False  # No additional models
+    N_concepts: 1854  # Total concepts in THINGS dataset
+    N_participants: 1  # Number of simulated participants per triplet
+    K_folds: 3  # Cross-validation folds for regularization selection
+    regularization_constants_list: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+    reg_func: "eye_distance"  # Regularization penalizes deviation from identity matrix
+
+
+# =============================================================================
+# EXPERIMENT: full_W_L1
+# =============================================================================
+# Runs simulations using L1 (Lasso) regularization for both data-generating
+# and candidate models. L1 regularization encourages sparse weight matrices.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating_L1/full/models_full_W/*.pkl
+# 3. Database: Results/Simulations_experiments/full_W_L1/full_W_L1.db
+#
+# Note: L1 regularization differs from default eye_distance in the penalty term
+# =============================================================================
+"full_W_L1":
+  paths:
+    # CORRECTED: Added missing "full/" subdirectory level
+    data_generating_models: "Data/models_data_generating_L1/full/models_full_W"
+    data_generating_features_folder: "Data/models_features/models_original_features/full" 
+    reference_models_features_folder: "Data/models_features/models_original_features/full" 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "full_W_L1.db"  
+
+  experiment:
+    used_additional_models: False  # No additional models
+    N_concepts: 1854
+    N_participants: 1
+    K_folds: 3  # Cross-validation folds
+    regularization_constants_list: [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+    reg_func: "L1"  # L1 (Lasso) regularization for sparse weights
+
+
+
+# =============================================================================
+# EXPERIMENT: full_W
+# =============================================================================
+# Main experiment: Full weight matrix with comprehensive parameter sweep.
+# This is the primary experiment in the paper using unconstrained W matrices.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating/full/models_full_W/*.pkl
+# 3. Database: Results/Simulations_experiments/full_W/full_W.db
+#
+# Key Parameters:
+# - Full dimensional features (no PCA reduction)
+# - Unconstrained W matrix (full flexibility)
+# - Eye_distance regularization (shrinkage toward identity)
+# - Extended regularization constant range for fine-grained selection
+# =============================================================================
+"full_W":
+  paths:
+    # Note: create_data_generating_models.py creates "models_full_W" subfolder
+    data_generating_models: "Data/models_data_generating/full/models_full_W"
+    data_generating_features_folder: "Data/models_features/models_original_features/full"
+    reference_models_features_folder: "Data/models_features/models_original_features/full"
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "full_W.db"  
+   
+
+  experiment: 
+    used_additional_models: False  # No additional models
+    N_concepts: 1854
+    N_participants: 1
+    K_folds: 3  # K-fold CV on disjoint concept subsets (not triplets)
+    # Extended regularization range: 11 constants from 1e-6 to 1e4
+    regularization_constants_list: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+    reg_func: "eye_distance"  # Penalizes ||W - αI||² (scalar-matrix shrinkage)
+
+
+# =============================================================================
+# EXPERIMENT: full_W
+# =============================================================================
+# Main experiment: Full weight matrix with comprehensive parameter sweep.
+# This is the primary experiment in the paper using unconstrained W matrices.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating/full/models_full_W/*.pkl
+# 3. Database: Results/Simulations_experiments/full_W/full_W.db
+#
+# Key Parameters:
+# - Full dimensional features (no PCA reduction)
+# - Unconstrained W matrix (full flexibility)
+# - Eye_distance regularization (shrinkage toward identity)
+# - Extended regularization constant range for fine-grained selection
+# =============================================================================
+"full_W_30_models":
+  paths:
+    # Note: create_data_generating_models.py creates "models_full_W" subfolder
+    data_generating_models: "Data/models_data_generating/full/models_full_W"
+    data_generating_features_folder: "Data/models_features/models_original_features/full"
+    reference_models_features_folder: "Data/models_features/models_original_features/full"
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "full_W_30_models.db"  
+
+  experiment: 
+    used_additional_models: True  # Use additional models
+    N_concepts: 1854
+    N_participants: 1
+    K_folds: 3  # K-fold CV on disjoint concept subsets (not triplets)
+    # Extended regularization range: 11 constants from 1e-6 to 1e4
+    regularization_constants_list: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+    reg_func: "eye_distance"  # Penalizes ||W - αI||² (scalar-matrix shrinkage)
+
+
+
+
+
+
+# =============================================================================
+# EXPERIMENT: zero_shot
+# =============================================================================
+# Zero-shot evaluation: No learned transformation (W = Identity).
+# Tests whether models can be distinguished without any feature alignment.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating/full/models_zero_shot/*.pkl
+# 3. Database: Results/Simulations_experiments/zero_shot/zero_shot.db
+#
+# Key Constraint:
+# - W matrix is fixed as identity (no parameters to learn)
+# - Regularization constant is 0 (no regularization needed)
+# - K_folds = 5 for more robust zero-shot evaluation
+# =============================================================================
+"zero_shot":
+    paths:
+      data_generating_models: "Data/models_data_generating/full/models_zero_shot"
+      data_generating_features_folder: "Data/models_features/models_original_features/full"
+      reference_models_features_folder: "Data/models_features/models_original_features/full" 
+      triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+      results_folder: "Results/Simulations_experiments/"
+      db_file_name: "zero_shot.db"  
+
+    experiment:
+      used_additional_models: False  # No additional models
+      N_concepts: 1854
+      N_participants: 1
+      K_folds: 3  # More folds for zero-shot (no overfitting risk)
+      regularization_constants_list: [0]  # No regularization (W is fixed)
+      reg_func: "eye_distance"  # Reg function doesn't matter (constant=0)
+
+
+
+# =============================================================================
+# EXPERIMENT: diagonal
+# =============================================================================
+# Diagonal constraint: W matrix restricted to diagonal (element-wise scaling).
+# Tests whether cross-feature transformations are necessary for recovery.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating/full/models_diagonal/*.pkl
+# 3. Database: Results/Simulations_experiments/diagonal/diagonal.db
+#
+# Key Constraint:
+# - W has only diagonal elements (d parameters instead of d²)
+# - Allows feature-wise scaling but no feature mixing
+# - Much fewer parameters than full_W
+# =============================================================================
+"diagonal":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/models_diagonal"
+    data_generating_features_folder: "Data/models_features/models_original_features/full"
+    reference_models_features_folder: "Data/models_features/models_original_features/full" 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "diagonal.db"
+  experiment:
+    used_additional_models: False  # No additional models
+    N_concepts: 1854
+    N_participants: 1
+    K_folds: 3
+    # Extended regularization range for diagonal constraint
+    regularization_constants_list: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+    reg_func: "eye_distance"  # Shrinks diagonal toward uniform scaling
+
+
+
+# =============================================================================
+# EXPERIMENT: rectangular_30
+# =============================================================================
+# Rectangular (low-rank) constraint: W projects to 30-dimensional bottleneck.
+# Tests whether low-dimensional transformations suffice for model recovery.
+#
+# Data Flow:
+# 1. Features: Data/models_features/models_original_features/full/*.pt
+# 2. Models: Data/models_data_generating/full/models_rectangular_30/*.pkl
+# 3. Database: Results/Simulations_experiments/rectangular_30/rectangular_30.db
+#
+# Key Constraint:
+# - W = U @ V where U is (d × 30) and V is (30 × d)
+# - Forces rank-30 approximation (30d parameters instead of d²)
+# - Tests sufficiency of 30-dimensional representation bottleneck
+# =============================================================================
+"rectangular_30":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/models_rectangular_30"
+    data_generating_features_folder: "Data/models_features/models_original_features/full"
+    reference_models_features_folder: "Data/models_features/models_original_features/full" 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    db_file_name: "rectangular_30.db"  
+  experiment:
+    used_additional_models: False  # No additional models
+    N_concepts: 1854
+    N_participants: 1
+    K_folds: 3  # More folds for low-rank constraint
+    # Extended regularization range
+    regularization_constants_list: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+    reg_func: "eye_distance"  # Regularizes toward identity in bottleneck space
+

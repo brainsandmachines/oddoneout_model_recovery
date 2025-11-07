@@ -1,0 +1,53 @@
+defaults:
+    - shared_args # Load shared arguments from shared_args.yaml
+
+# Paths for the data and saving the models and analysis
+paths:
+    train_triplets: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_train_set.pt"
+    train_answers: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_train_set.pt"
+    test_triplets: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_testset2_noise_ceiling.pt"
+    test_answers: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_testset2_noise_ceiling.pt"
+    features_dir: "Data/models_features/models_original_features/"
+    models_out: "Data/models_data_generating/"
+    analysis_out: "Results/models_data_generating_analysis/"
+
+
+
+# Regularisation constants to use for the data generating models
+reg_cons:
+    - 0.000001
+    - 0.00001
+    - 0.0001
+    - 0.001
+    - 0.01
+    - 0.1
+    - 1
+    - 10
+    - 100
+
+# The number of folds to use for the data generating models evaluations
+k_fold: 5
+
+# The empirical noise ceiling to use for the data generating models
+noise_ceiling: 0.678
+
+# Whether to only calibrate the data generating models
+calibrate_only: False
+
+# Whether to use PCA 500 features for the data generating models
+PCA_500_Features: False
+
+# The regularization function to use for W-matrix fitting
+# Options: "L2" (standard L2 regularization) or "eye_distance" (penalizes deviation from scaled identity matrix) or L1 for Lasso. 
+reg_func: "eye_distance"
+
+# Include new models
+include_new_models: False
+# The list of constraints on the linear transformation to use for the data generating models
+constraints_list:
+- "zero_shot"
+- "full_W"
+- "diagonal"
+- ("rectangular",30)
+
+

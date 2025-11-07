@@ -1,0 +1,169 @@
+# ============================================================================
+# Configuration for building the models properties table
+# ============================================================================
+#
+# SCRIPT: analysis_scripts/create_models_properties_table.py
+#
+# IMPORTANT LIMITATIONS:
+#   This configuration is NOT dynamic and currently works ONLY for:
+#   - Full-dimension features (no PCA or dimensionality reduction)
+#   - Full-dimension features with a full_W learned transformation matrix
+#
+#   The paths and naming conventions are specific to this setup.
+#   Modifications would be required for other transformation types.
+#
+# PREREQUISITES:
+#   Before running the script, ensure you have:
+#
+#   1. RSA (Representational Similarity Analysis) Matrix:
+#      - Must be generated from full-dimension features
+#      - Should contain similarity between _raw and _post versions of each model
+#      - Expected format: NetCDF (.nc) or Zarr file readable by xarray
+#      - Generated using the build_rsa_sim_matrix.py script
+#
+#   2. Metadata CSV File:
+#      - Contains model parameters (n_params, embed_dim, etc.)
+#      - Generated using an in-house package that was also used to extract
+#        the THINGS features from the models
+#      - MUST include a 'model_name' column for merging
+#      - Example columns: model_name, n_params, embed_dim
+#
+#   3. Feature Files:
+#      - Raw features: PyTorch tensors (.pt) in features_raw_path
+#      - Transformed features: PyTorch tensors (.pt) in features_post_path
+#      - Naming convention: <model_name>.pt
+#      - Shape: (n_samples, n_features) where n_samples is typically
+#        the number of THINGS concepts
+#
+# OUTPUT:
+#   Creates a CSV file (models_properties.csv) with comprehensive metrics
+#   including effective dimensionality, intrinsic dimensionality estimates,
+#   alignment-induced shifts, and metadata for each model.
+#
+#   NOTE: The output CSV will ONLY contain columns for metrics that are enabled
+#   in the 'metrics' section below. Disabled metrics will not create empty columns.
+#   This keeps the output clean and avoids unnecessary data in the CSV.
+#
+#   Column ordering in output CSV (only enabled metrics appear):
+#     1. model_name (always present)
+#     2. n_params (from metadata CSV if available)
+#     3. embed_dim (always present, inferred from features)
+#     4. ED_pre, ED_post, delta_ed(post-pre) (if compute_effective_dimensionality=true)
+#     5. pre_gride, post_gride, delta_gride (if compute_gride=true)
+#     6. pre_twonn, post_twonn, delta_twonn (if compute_two_nn=true)
+#     7. alignment_induced_shift (if compute_embedding_pre_post_distance=true)
+#     8. Any additional columns from metadata CSV
+#
+# ============================================================================
+
+defaults:
+  - shared_args # import shared arguments (contains models list, etc.)
+
+# Model Selection
+# ----------------------------------------------------------------------------
+# If include_new_models is False, only models from shared_args.models are used.
+# If True, both models and new_models lists are combined.
+include_new_models: False  # Whether to include new_models in addition to models
+
+# Paths Configuration
+# ----------------------------------------------------------------------------
+paths:
+  # Raw features directory
+  # Contains PyTorch tensors saved per model as <model_name>.pt
+  # Shape: (n_samples, n_features)
+  # NOTE: Currently expects full-dimension features only
+  features_raw_path: "Data/models_features/models_original_features/full"
+  
+  # Post-transformation features directory
+  # Contains transformed features with same naming and shapes as raw features
+  # Transformed using full_W learned transformation matrix
+  # NOTE: Currently expects full-dimension transformations only
+  features_post_path: "Data/models_features/models_transformed_features/full/full_W"
+  
+  # Metadata CSV file (REQUIRED PREREQUISITE)
+  # Must include column 'model_name' for merging with computed metrics
+  # Should contain model parameters generated using in-house package
+  # Optional columns: n_params, embed_dim, architecture details, etc.
+  # If not provided or missing columns, those fields will be NaN or inferred
+  metadata_csv_path: "Data/models_n_params_table/models_params_and_embed_dim.csv"
+  
+  # RSA results file (REQUIRED PREREQUISITE for alignment shift computation)
+  # Contains representational similarity matrix between models
+  # Expected format: xarray Dataset (.nc or .zarr file)
+  # Must contain similarity values between <model>_raw and <model>_post versions
+  # Generated using analysis_scripts/build_rsa_sim_matrix.py
+  # NOTE: Must be built from full-dimension features for consistency
+  rsa_xarray_path: "'Results/rsa/sim_full_dim_full_W.nc'"
+  
+  # Output directory for the final CSV
+  # Will create models_properties.csv containing all computed metrics
+  output_dir: "Results/models_properties_table"
+
+# Metrics Configuration
+# ----------------------------------------------------------------------------
+# Control which metrics to compute. Set to false to skip expensive computations.
+metrics:
+  # Effective Dimensionality (Participation Ratio)
+  # Measures how variance is distributed across principal components
+  # Formula: ED = (sum(λ))² / sum(λ²) where λ are eigenvalues
+  # Computed for both raw (ED_pre) and transformed (ED_post) features
+  compute_effective_dimensionality: true
+  
+  # Two-Nearest-Neighbors Intrinsic Dimensionality Estimator
+  # Estimates intrinsic dimensionality using ratio of distances to first and second neighbors
+  # Can be computationally expensive for large datasets
+  # Computed for both raw and transformed features if enabled
+  # NOTE: Currently disabled by default; set to true to enable
+  compute_two_nn: false
+  
+  # Gride Intrinsic Dimensionality Estimator
+  # Estimates intrinsic dimensionality using gradient-based scaling analysis
+  # More robust than Two-NN for high-dimensional data
+  # Computed for both raw and transformed features
+  compute_gride: true
+  
+  # Maximum neighborhood size for Gride computation
+  # Determines the range of scales analyzed
+  # Should be smaller than number of samples; typical value: 64
+  # Larger values = more scales analyzed but slower computation
+  gride_range_max: 64
+  
+  # Embedding Pre-Post Distance
+  # Computes mean cosine distance between raw and transformed embeddings
+  # Measures how much transformation has changed individual sample representations
+  # Range: [0, 2] where 0 = no change, 2 = complete reversal
+  # NOTE: This creates the 'alignment_induced_shift' column in output
+  compute_embedding_pre_post_distance: true
+  
+  # Alignment-Induced Representational Shift (from RSA)
+  # Computes shift in representational geometry using RSA similarity matrix
+  # Requires rsa_xarray_path to be specified and valid
+  # Measures distance (1 - similarity) between <model>_raw and <model>_post
+  # NOTE: Only works with RSA matrices built from full-dimension features
+  # NOTE: If both this and compute_embedding_pre_post_distance are true,
+  #       the RSA-based computation will overwrite the cosine distance value
+  compute_alignment_shift_from_rsa: true
+  
+  # RSA shift metric (if only RDMs present in dataset)
+  # Options: 'spearman' or 'frobenius'
+  # Typically not used if similarity matrix is directly available
+  rsa_shift_metric: "spearman"
+  
+  # NOTE: At the end of execution, the script will log which columns were actually
+  # computed and included in the output CSV. This helps verify that your configuration
+  # flags are working correctly. Example log message:
+  #   "Output contains 50 models with columns: model_name, n_params, embed_dim, 
+  #    ED_pre, ED_post, delta_ed(post-pre), pre_gride, post_gride, delta_gride"
+
+# Runtime Configuration
+# ----------------------------------------------------------------------------
+runtime:
+  # Reserved for potential parallelization (currently not implemented)
+  num_workers: 1
+  
+  # Device for computation ('cuda' or 'cpu')
+  # Note: Most heavy computations (PCA, DADApy) run on CPU regardless
+  device: "cuda"
+
+
+

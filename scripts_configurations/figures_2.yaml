@@ -1,0 +1,334 @@
+# =============================================================================
+# Figure 2 Configuration - Model Accuracy on THINGS Odd-One-Out Task
+# =============================================================================
+#
+# This configuration file controls the generation of Figure 2, which displays
+# model predictive accuracy on the THINGS odd-one-out behavioral task across
+# different transformation flexibility levels.
+#
+# Paper Context:
+# --------------
+# Figure 2 shows how 32 vision models perform on predicting human odd-one-out
+# choices from the THINGS dataset under different linear transformation
+# constraints (W matrix flexibility levels). The figure demonstrates that
+# while increased flexibility improves accuracy, it comes at the cost of
+# reduced model identifiability (as shown in later figures).
+#
+# Figure Components:
+# -----------------
+# - Horizontal bar plots: Model accuracy with 95% confidence intervals
+# - Metroplot: Statistical pairwise comparisons between models (sign tests)
+# - Color coding: Models grouped by training objective (supervised, 
+#   self-supervised, multimodal)
+# - Architecture annotations: 'T' (Transformer) vs 'C' (CNN)
+# - Reference lines: Chance level (33%) and noise ceiling (67%)
+#
+# =============================================================================
+
+defaults:
+  - _self_
+  - figure_base      # Base figure formatting parameters (font sizes, etc.)
+  - shared_args      # Shared model lists and objectives
+
+# =============================================================================
+# General Configuration
+# =============================================================================
+
+# Output naming for saved files and directories
+figure_output_name: 'THINGS_accuracy'  # Prefix for output folders and files
+
+# Number of color gradations for each model category (for visual distinctiveness)
+colors_for_each_group:
+  supervised: 13          # Number of color steps for supervised models
+  self_supervised: 5      # Number of color steps for self-supervised models  
+  multimodal: 12          # Number of color steps for multimodal models
+
+# Feature representation type to use
+features_type: 'full'             # Options: 'full' (all features) or 'PCA_500' (500 PCA components)
+use_additional_models: False      # Set to True to include 10 additional models (Figure S4/S5)
+
+# =============================================================================
+# Transformation Flexibility Levels (Constraint Types)
+# =============================================================================
+# Each constraint type represents a different level of flexibility in the
+# linear transformation W that maps model representations to the behavioral
+# prediction space.
+#
+# Constraint type definitions:
+# - 'zero_shot': W = I (identity matrix, no transformation)
+# - 'diagonal': W ∈ Diag(ℝ^{p×p}) (diagonal scaling only)
+# - 'Rectangular_N': W ∈ ℝ^{p×N} (rank-N projection)
+# - 'full_W': W ∈ ℝ^{p×p} (full linear transformation)
+#
+# Maximum 4 constraint types can be displayed (figure layout limitation)
+# =============================================================================
+
+constraint_types: ['zero_shot', 'diagonal', 'Rectangular_30', 'full_W']
+
+# Regularization method applied during model training
+# Options: 'eye_distance' (distance from identity) or 'L2' (standard L2 penalty)
+regularization_type: 'eye_distance'
+
+# =============================================================================
+# Path Configuration
+# =============================================================================
+
+# Base directory containing model evaluation results
+# Structure: {results_base_dir}/{features_type}/{constraint_type}/
+# 
+# IMPORTANT: This path must match the results_out path from evaluate_THINGS_OOO_accuracy_CV.yaml!
+# 
+# Default behavior (evaluating BOTH L2 and eye_distance):
+#   - The directory contains results for BOTH regularization types
+#   - Separate CSV files exist for each: best_test_acc_L2_*.csv and best_test_acc_eye_distance_*.csv
+#   - The directory name uses the primary/default regularization as suffix
+results_base_dir: 'Results/regularization_methods_compare_all_models_eye_distance'
+#
+# The regularization_type parameter below selects WHICH results to use from this directory.
+# You can switch between L2 and eye_distance results without changing this path:
+#   regularization_type: "eye_distance"  # Uses best_test_acc_eye_distance_*.csv
+#   regularization_type: "L2"             # Uses best_test_acc_L2_*.csv
+#
+# Only change this path if you created a separate evaluation run with different regularization:
+#   Example: "Results/regularization_methods_compare_all_models_L2" (L2-only evaluation)
+
+# Directory containing partitioned THINGS dataset folds
+data_base_dir: 'Data/Things_data_preprocessed/partitions_folds'
+
+# =============================================================================
+# Statistical Analysis Settings
+# =============================================================================
+
+# Confidence level for binomial confidence intervals on accuracy estimates
+confidence_level: 0.95
+
+# Force recomputation of accuracy and statistical comparisons even if files exist
+force_recompute: false
+
+# =============================================================================
+# Model Selection and Ordering
+# =============================================================================
+# Models are listed in display order (top to bottom in figure)
+# Grouped by training objective: supervised → self-supervised → multimodal
+# Within each group, models are ordered to facilitate visual comparison
+# =============================================================================
+
+models_grouped_list: [
+  # -------------------------------------------------------------------------
+  # Supervised Models (ImageNet classification)
+  # -------------------------------------------------------------------------
+  # CNN architectures
+    'ResNet50',           # Residual networks
+    'VGG19',              # Classic deep CNN
+    'DenseNet201',        # Densely connected networks
+    'ConvNext_Large',     # Modern CNN with transformer-inspired design
+    'EfficientNet_B7',    # Compound scaling architecture
+    'NASNet_Large',       # Neural architecture search
+    'CORnet_S',           # Brain-inspired recurrent CNN
+    'AlexNet',            # Historic baseline CNN
+    
+  # Hybrid and Transformer architectures
+    'InceptionRN_V2',     # Inception-ResNet hybrid
+    'Inception_V3',       # Multi-scale inception modules
+    'Google_ViT_Large',   # Vision Transformer (original)
+    'Deit3_Huge',         # Data-efficient Image Transformer
+    'Beit_V2_Large',      # Masked image modeling (self-supervised pretraining + supervised fine-tuning)
+    
+  # -------------------------------------------------------------------------
+  # Self-Supervised Models (contrastive/predictive objectives)
+  # -------------------------------------------------------------------------
+    'DINOv2_ViT_Large',        # Self-distillation with no labels (v2)
+    'Fair_SimCLR_ViT_Large',   # Simple contrastive learning (Meta AI)
+    'BarlowTwins_RN50',        # Redundancy reduction objective
+    'SWAV_RN50',               # Swapped prediction clustering
+    'VicReg_RN50',             # Variance-Invariance-Covariance regularization
+    
+  # -------------------------------------------------------------------------
+  # Multimodal Models (image-text alignment)
+  # -------------------------------------------------------------------------
+    'Fair_Clip_ViT_Large',     # Contrastive language-image pretraining (Meta AI)
+    'Fair_SLIP_ViT_Large',     # Self-supervised + language-image pretraining (Meta AI)
+    'Clip_RN50',               # Original CLIP with ResNet backbone (OpenAI)
+    'OpenCLIP_ConvNext_XL',    # Open-source CLIP with ConvNext
+    'ALIGN',                   # Large-scale noisy image-text pairs (Google)
+    'FLAVA_Full',              # Foundational language and vision alignment
+    'SigLIP2_Base_P16_224',    # Sigmoid loss CLIP variant
+    'BLIP_2',                  # Bootstrapped language-image pretraining
+    'EVA02_CLIP_Enormous',     # Enormous-scale CLIP variant
+    'PE_Huge',                 # Perception encoder
+    'Image_Bind_Huge',         # Multi-modal binding across 6+ modalities
+    'Clip_ViT_Large'           # CLIP with Vision Transformer (OpenAI)
+]
+
+# =============================================================================
+# Model Display Names (Formal Names for Figure)
+# =============================================================================
+# Maps internal model names to publication-quality display names
+# Format guidelines:
+# - Architecture abbreviations: ViT (Vision Transformer), RN (ResNet)
+# - Size indicators: L (Large), H (Huge), B (Base), E (Enormous)
+# - Version numbers where applicable
+# =============================================================================
+
+formal_names_dict: 
+    # -------------------------------------------------------------------------
+    # Transformer-based Supervised Models
+    # -------------------------------------------------------------------------
+    'Google_ViT_Large': 'ViT L/16'          # Vision Transformer Large, patch size 16
+    'Deit3_Huge': 'DeiT3 H'                 # Data-efficient Image Transformer v3 Huge
+    'Beit_V2_Large': 'BEiTv2 L'             # BERT-inspired Image Transformer v2 Large
+    
+    # -------------------------------------------------------------------------
+    # Transformer-based Self-Supervised Models  
+    # -------------------------------------------------------------------------
+    'DINOv2_ViT_Large': 'DINOv2 L'          # Self-distillation v2 Large
+    'Fair_SimCLR_ViT_Large': 'Meta AI SimCLR L'  # Meta's SimCLR implementation
+    
+    # -------------------------------------------------------------------------
+    # Transformer-based Multimodal Models
+    # -------------------------------------------------------------------------
+    'Fair_Clip_ViT_Large': 'Meta AI CLIP L'      # Meta's CLIP implementation
+    'Fair_SLIP_ViT_Large': 'Meta AI SLIP L'      # Meta's SLIP implementation
+    
+    # -------------------------------------------------------------------------
+    # CNN-based Supervised Models
+    # -------------------------------------------------------------------------
+    'ResNet50': 'ResNet50'                   # 50-layer Residual Network
+    'VGG19': 'VGG19'                         # 19-layer VGG network
+    'DenseNet201': 'DenseNet201'             # 201-layer Dense Network
+    'ConvNext_Large': 'ConvNext L'           # ConvNext Large
+    'EfficientNet_B7': 'EfficientNet B7'     # EfficientNet baseline 7
+    'NASNet_Large': 'NASNet L'               # Neural Architecture Search Large
+    'CORnet_S': 'CORnet S'                   # Neuroscience-inspired CNN
+    'InceptionRN_V2': 'InceptionRNv2'        # Inception-ResNet v2 hybrid
+    'Inception_V3': 'Inceptionv3'            # Inception v3
+    'AlexNet': 'AlexNet'                     # Historic baseline (2012)
+    
+    # -------------------------------------------------------------------------
+    # CNN-based Self-Supervised Models
+    # -------------------------------------------------------------------------
+    'BarlowTwins_RN50': 'BarlowTwins RN50'   # Barlow Twins with ResNet50
+    'SWAV_RN50': 'SWAV RN50'                 # SwAV with ResNet50
+    'VicReg_RN50': 'VicReg RN50'             # VicReg with ResNet50
+    
+    # -------------------------------------------------------------------------
+    # CNN/Hybrid Multimodal Models
+    # -------------------------------------------------------------------------
+    'Clip_RN50': 'OpenAI CLIP RN50'          # OpenAI CLIP with ResNet50
+    'OpenCLIP_ConvNext_XL': 'OpenCLIP ConvNext XL'  # Open-source CLIP variant
+    
+    # -------------------------------------------------------------------------
+    # Transformer-based Multimodal Models (Extended)
+    # -------------------------------------------------------------------------
+    'ALIGN': 'ALIGN'                         # Google's noisy image-text model
+    'FLAVA_Full': 'FLAVA Full'               # Foundational alignment model
+    'SigLIP2_Base_P16_224': 'SigLIP2 B'      # Sigmoid loss CLIP v2
+    'BLIP_2': 'BLIP 2'                       # Bootstrapped pretraining v2
+    'EVA02_CLIP_Enormous': 'EVA02 CLIP E'    # Enormous-scale CLIP
+    'PE_Huge': 'PE Huge'                     # Perception Encoder Huge
+    'Image_Bind_Huge': 'Image Bind H'        # Multi-modal binding model
+    'Clip_ViT_Large': 'OpenAI CLIP ViT L'    # OpenAI CLIP with ViT Large
+
+
+# =============================================================================
+# Panel Labels Configuration
+# =============================================================================
+# X-axis labels for each constraint type panel
+# Uses LaTeX math notation for mathematical expressions
+# =============================================================================
+
+panel_labels:
+  zero_shot: "predictive accuracy $(W = I_{p \\times p})$"
+  diagonal: "predictive accuracy $(W \\in Diag(\\mathbb{R}^{p\\times p}))$"
+  Rectangular_10: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 10})$"
+  Rectangular_20: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 20})$"
+  Rectangular_30: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 30})$"
+  Rectangular_40: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 40})$"
+  Rectangular_50: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 50})$"
+  Rectangular_60: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 60})$"
+  Rectangular_70: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 70})$"
+  Rectangular_80: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 80})$"
+  Rectangular_90: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 90})$"
+  Rectangular_100: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times 100})$"
+  full_W: "predictive accuracy $(W \\in \\mathbb{R}^{p\\times p})$"
+
+# =============================================================================
+# Color Legend Configuration
+# =============================================================================
+# Defines gradient color legends for each model category in the figure
+# Colors are automatically generated in the main script using cubehelix palettes
+# These fields are populated at runtime with color lists
+# =============================================================================
+
+legend_gradient_dict:
+  "Supervised": ~              # Populated with supervised model color gradient
+  "Self-supervised": ~         # Populated with self-supervised model color gradient
+  "Image-Text Alignment": ~    # Populated with multimodal model color gradient
+
+# =============================================================================
+# Model Architecture Classification
+# =============================================================================
+# Maps each model to its base architecture type for annotation in figures
+# Used to display 'C' (CNN) or 'T' (Transformer) labels on bars
+# =============================================================================
+
+architecture_dict:
+    # -------------------------------------------------------------------------
+    # Transformer-based Models
+    # -------------------------------------------------------------------------
+    'Google_ViT_Large': 'Transformer'
+    'Deit3_Huge': 'Transformer'
+    'Beit_V2_Large': 'Transformer'
+    'DINOv2_ViT_Large': 'Transformer'
+    'Fair_SimCLR_ViT_Large': 'Transformer'
+    'Fair_Clip_ViT_Large': 'Transformer'
+    'Fair_SLIP_ViT_Large': 'Transformer'
+    'ALIGN': 'Transformer'
+    'FLAVA_Full': 'Transformer'
+    'SigLIP2_Base_P16_224': 'Transformer'
+    'BLIP_2': 'Transformer'
+    'EVA02_CLIP_Enormous': 'Transformer'
+    'PE_Huge': 'Transformer'
+    'Image_Bind_Huge': 'Transformer'
+    'Clip_ViT_Large': 'Transformer'
+    
+    # -------------------------------------------------------------------------
+    # CNN-based Models (including ConvNext which uses CNN architecture)
+    # -------------------------------------------------------------------------
+    'ResNet50': 'CNN'
+    'VGG19': 'CNN'
+    'DenseNet201': 'CNN'
+    'ConvNext_Large': 'CNN'          # Modernized CNN with transformer concepts
+    'EfficientNet_B7': 'CNN'
+    'NASNet_Large': 'CNN'
+    'CORnet_S': 'CNN'
+    'InceptionRN_V2': 'CNN'
+    'Inception_V3': 'CNN'
+    'BarlowTwins_RN50': 'CNN'
+    'SWAV_RN50': 'CNN'
+    'VicReg_RN50': 'CNN'
+    'Clip_RN50': 'CNN'
+    'OpenCLIP_ConvNext_XL': 'CNN'
+    'AlexNet': 'CNN'
+
+# =============================================================================
+# Legacy Path Configurations (Deprecated - kept for backward compatibility)
+# =============================================================================
+# These paths are no longer actively used but kept to prevent breaking changes
+# The main script now uses dynamically constructed paths based on the
+# constraint_types and regularization_type parameters
+# =============================================================================
+
+# Deprecated: Use constraint_types configuration instead
+predicitons_save_dir: "Results/regularization_methods_compare_all_models_eye_distance/full/full_W/predictions"
+df_path: "Results/regularization_methods_compare_all_models_eye_distance/full/full_W/best_test_acc_for_each_model.csv"
+zero_shot_df_path: "Results/regularization_methods_compare_all_models_eye_distance/full/full_W/zero_shot/best_test_acc_for_each_model_full_zero_shot.csv"
+
+# Deprecated: Use results_base_dir and features_type instead
+paths:
+  predictions_save_dir:
+    full_W: "Results/regularization_methods_compare_all_models_eye_distance/full/full_W"
+    full: "Results/regularization_methods_compare_all_models_eye_distance/full/full"
+  
+  results_dir: "Results"
+  figures_dir: "04_Plots"

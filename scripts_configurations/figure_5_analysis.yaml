@@ -1,0 +1,248 @@
+# =============================================================================
+# Configuration for Figure 5 Analysis: Model Recovery vs. Transformation Flexibility
+# =============================================================================
+#
+# PURPOSE:
+# --------
+# This configuration file controls the analysis that evaluates how different levels
+# of transformation flexibility affect model recovery accuracy. The analysis tests
+# various constraint types (from rigid zero-shot to flexible full matrices) across
+# different training set sizes to understand identifiability limits.
+#
+# SCIENTIFIC BACKGROUND:
+# ---------------------
+# Model recovery asks: If we fit multiple candidate models to behavioral data,
+# can we correctly identify which model generated that data? This is a fundamental
+# question about model identifiability and evaluation metric validity.
+#
+# We test recovery under different transformation flexibilities:
+#   - zero_shot: No learning (W = Identity matrix)
+#   - diagonal: Element-wise scaling only
+#   - Rectangular_k: Low-rank projection to k dimensions  
+#   - full_W_L1: Full matrix with L1 regularization
+#   - full_W: Full unconstrained matrix (maximum flexibility)
+#
+# KEY INSIGHT:
+# Even with massive training sets (1.6M triplets), recovery accuracy plateaus
+# below 80% for flexible transformations, demonstrating fundamental limits of
+# overly flexible alignment metrics.
+#
+# CONFIGURATION SECTIONS:
+# ======================
+
+defaults:
+  - _self_
+  - shared_args  # Imports model lists from shared_args.yaml
+
+# =============================================================================
+# SECTION 1: Model Selection
+# =============================================================================
+include_additional_models: False
+# Whether to include 10 additional models beyond the base 20 models.
+# - False: Use only the 20 base models from shared_args.yaml
+# - True: Use all 30 models (base 20 + new_models from shared_args.yaml)
+# 
+# Note: Additional models were used for Figure S4/S5 supplementary analyses.
+# For the main Figure 5 analysis, set to False.
+
+# =============================================================================
+# SECTION 2: Feature Configuration
+# =============================================================================
+
+features_dir: "Data/models_features/models_original_features"  
+# Directory containing pre-extracted neural network features.
+#
+# IMPORTANT: We use ORIGINAL (untransformed) features here because this analysis
+# RETRAINS the transformation matrices W for each training set size. 
+#
+# Do NOT use transformed features from Data/models_data_generating/ because
+# those were pre-trained on the full dataset and would give misleading results
+# when evaluating performance on smaller training sets.
+
+reg_cons: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000]
+# Regularization constants to test during model training.
+#
+# For each model, we:
+# 1. Train with each regularization constant on the training set
+# 2. Evaluate on the validation set
+# 3. Select the constant that gives best validation accuracy
+# 4. Retrain on train+validation with the best constant
+# 5. Report final performance on the held-out test set
+#
+# This cross-validation approach prevents overfitting and ensures robust results.
+
+features_dim: "full"
+# Feature dimensionality to use:
+#   - "full": Original feature dimensions (varies by model, typically 512-2048)
+#   - "PCA_500": PCA-reduced to 500 dimensions (for dimensionality reduction experiments)
+#
+# For the main Figure 5 analysis, use "full".
+# The "PCA_500" option is for supplementary dimensionality reduction analyses.
+
+# =============================================================================
+# SECTION 3: Dataset Paths
+# =============================================================================
+
+paths:
+  partitions_dir: "Data/Things_data_preprocessed/partitions_folds"
+  # Directory containing pre-computed K-fold cross-validation partitions.
+  # These partitions ensure disjoint concept sets across folds (no image overlap).
+  
+  triplets_tensor_path: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_train_set.pt"
+  # Tensor of shape [N_triplets, 3] containing triplet indices.
+  # Each row is [anchor_idx, option1_idx, option2_idx] referring to concept IDs.
+  
+  triplets_answers_positions_tensor_path: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_train_set.pt"
+  # Tensor of shape [N_triplets] containing human responses.
+  # Values are 0 or 1, indicating which option was chosen as the odd-one-out.
+
+k_folds: 3
+# Number of cross-validation folds.
+# 
+# How it works:
+# - Concepts (not triplets!) are split into 3 disjoint sets
+# - Each fold uses different concept subsets for train/val/test
+# - This ensures zero image overlap between training and testing
+# - Final metrics are averaged across all 3 folds
+
+# =============================================================================
+# SECTION 4: Simulation Database Paths
+# =============================================================================
+db_paths_dict:
+  # This dictionary maps feature dimensionalities to their respective database paths.
+  # Structure: db_paths_dict[features_dim][constraint_type] = path/to/database.db
+  
+  full:
+    # Databases for full-dimensional features (original model dimensions)
+    # These contain model recovery simulation results for each constraint type.
+    
+    zero_shot: "Results/Simulations_experiments/zero_shot/zero_shot.db"
+    # Zero-shot baseline: W = Identity matrix (no learning)
+    # Represents the most rigid constraint - models are evaluated as-is
+    
+    diagonal: "Results/Simulations_experiments/diagonal/diagonal.db"
+    # Diagonal transformation: Element-wise scaling only
+    # Allows per-dimension rescaling but no rotation or mixing
+    
+    Rectangular_30: "Results/Simulations_experiments/rectangular_30/rectangular_30.db"
+    # Low-rank projection: Project features to 30 dimensions
+    # Forces dimensionality reduction while learning optimal subspace
+    
+    full_W_L1: "Results/Simulations_experiments/full_W_L1/full_W_L1.db"
+    # Full matrix with L1 regularization (promotes sparsity)
+    # Maximum flexibility with sparsity constraint
+    
+    full_W: "Results/Simulations_experiments/full_W/full_W.db"
+    # Full unconstrained matrix transformation
+    # Maximum flexibility - can perform arbitrary linear transformations
+  
+  # NOTE: PCA_500 databases are placeholders for potential future experiments
+  # We didn't run reduced-dimensional model recovery simulations except for
+  # what is presented in Figure S2 for the full_W case.
+  # If you run dimensionality reduction experiments, update these paths.
+  PCA_500:
+  zero_shot: "path/to/PCA_500/zero_shot/zero_shot.db"  # TODO: Update with actual database path
+  diagonal: "path/to/PCA_500/diagonal/diagonal.db"    # TODO: Update with actual database path
+  Rectangular_30: "path/to/PCA_500/rectangular_30/rectangular_30.db"  # TODO: Update with actual database path
+  full_W_L1: "path/to/PCA_500/full_W_L1/full_W_L1.db"  # TODO: Update with actual database path
+  full_W: "path/to/PCA_500/full_W/full_W.db"          # TODO: Update with actual database path
+
+# =============================================================================
+# SECTION 5: Training Set Sizes
+# =============================================================================
+
+n_list: [400, 25600, 204800, 1638400]
+# Training set sizes (number of odd-one-out triplets) to evaluate.
+#
+# Size breakdown:
+#   - 400: Very small (0.02% of full dataset)
+#   - 25,600: Small (1.6% of full dataset) 
+#   - 204,800: Medium (12.5% of full dataset)
+#   - 1,638,400: Full dataset (100% = all available training triplets)
+#
+# Key finding: Even with the full dataset (1.6M triplets), model recovery
+# accuracy for flexible transformations (full_W) plateaus below 80%,
+# demonstrating fundamental identifiability issues.
+
+# =============================================================================
+# SECTION 6: Output Configuration  
+# =============================================================================
+
+save_path: "Results/flexibility_accuracy/"
+# Root directory for saving analysis results.
+#
+# Output structure:
+#   Results/flexibility_accuracy/
+#   ├── {constraint_type}/
+#   │   └── train_set_size_{n}/
+#   │       ├── best_acc_models.csv      # Best accuracy for each model
+#   │       ├── mean_acc_models.csv      # Mean accuracy across reg_cons
+#   │       └── folds_acc_models.csv     # Per-fold accuracy details
+#   └── final_results_df.csv             # Aggregated summary results
+
+# =============================================================================
+# SECTION 7: Constraint Types to Analyze
+# =============================================================================
+constraint_types_to_analyze: ['full_W_L1', "zero_shot", "diagonal", "Rectangular_30", "full_W"]
+# List of constraint types to analyze, in the order they should be processed.
+#
+# WHAT THIS CONTROLS:
+# -------------------
+# 1. **Which** constraints are analyzed (only those listed will be processed)
+# 2. **Order** of processing (determines loop iteration and output ordering)
+# 3. **Skipping** constraints (omit from list to skip entirely)
+#
+# CONSTRAINT NAMES MUST MATCH:
+# ----------------------------
+# - Keys in db_paths_dict (for database lookups)
+# - Directory names in save_path (for checkpoint validation)
+#
+# AVAILABLE CONSTRAINT TYPES:
+# ---------------------------
+# - 'full_W_L1': Full matrix with L1 regularization
+# - 'zero_shot': Identity matrix (no transformation)
+# - 'diagonal': Element-wise scaling only
+# - '(Rectangular,30)': Low-rank projection to 30D (note the tuple format!)
+# - 'full_W': Full unconstrained matrix
+#
+# FLEXIBILITY ORDERING (rigid → flexible):
+# ----------------------------------------
+# zero_shot < diagonal < (Rectangular,30) < full_W_L1 ≈ full_W
+#
+# USAGE EXAMPLES:
+# ---------------
+# # Analyze only the most rigid and most flexible:
+# constraint_types_to_analyze: ['zero_shot', 'full_W']
+#
+# # Analyze in reverse order (most flexible first):
+# constraint_types_to_analyze: ['full_W', '(Rectangular,30)', 'diagonal', 'zero_shot']
+#
+# # Skip diagonal and rectangular (analyze only extremes + L1):
+# constraint_types_to_analyze: ['full_W_L1', 'zero_shot', 'full_W']
+#
+# # Test a single constraint:
+# constraint_types_to_analyze: ['full_W']
+#
+# HOW IT WORKS:
+# -------------
+# 1. Script validates all configurations listed here
+# 2. Identifies which (constraint, n) pairs have missing/incomplete results
+# 3. Processes ONLY the constraints in this list that have missing data
+# 4. Preserves the order specified here during processing
+# 5. Skips any constraints not in this list (even if they have missing data)
+#
+# CHECKPOINT RECOVERY:
+# -------------------
+# If some configurations are already complete:
+# - Script loads existing results from save_path
+# - Only recomputes missing/incomplete (constraint, n) combinations
+# - Preserves all previously computed results
+# - Merges new results with existing ones
+#
+# SPECIAL NOTE ON TUPLE FORMAT:
+# -----------------------------
+# Rectangular constraints use tuple format: "(Rectangular,30)"
+# - Must be a string containing the tuple representation
+# - Number indicates dimensionality (e.g., 30 dimensions)
+# - Alternative values: "(Rectangular,50)", "(Rectangular,100)", etc.
+# - The script will parse this string into a Python tuple automatically

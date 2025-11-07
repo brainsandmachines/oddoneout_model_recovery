@@ -1,0 +1,316 @@
+# =============================================================================
+# Simulation Database Configuration for Model Recovery Experiments
+# =============================================================================
+#
+# This configuration file defines different experimental setups for testing
+# model recovery performance under various conditions. Each experiment type
+# specifies paths, parameters, and constraints for simulation jobs.
+#
+# The configuration uses Hydra for hierarchical configuration management:
+# - shared_args.yaml: Contains the list of models to test
+# - This file: Defines experiment-specific parameters
+#
+# Usage:
+#   python create_simulations_db.py experiment_type=<experiment_name>
+#
+# =============================================================================
+
+defaults:
+  - _self_
+  - shared_args  # Import shared arguments (contains models list, etc.)
+
+# Default experiment type - can be overridden via command line
+experiment_type: "full_W"
+
+
+# =============================================================================
+# EXPERIMENT: full_W_L1
+# =============================================================================
+# Tests model recovery with L1 regularization on both data-generating and
+# candidate models. L1 regularization encourages sparse weight matrices.
+#
+# Key features:
+# - Uses L1 regularization for both data-generating and candidate models
+# - Tests across 4 different dataset sizes
+# - 10 simulation runs per condition
+
+# =============================================================================
+"full_W_L1":
+  paths:
+    data_generating_models: "Data/models_data_generating_L1/models_full_W"
+    data_generating_features_folder: Data/models_features/models_original_features/full
+    reference_models_features_folder: Data/models_features/models_original_features/full
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "full_W_L1_test"  # Name for the database file
+    
+  experiment:
+    N_train_triplets_list: [
+                            400,
+                            25600,
+                            204800,
+                            1638400,
+                            ]
+    N_concepts: 1854  # Number of concepts in THINGS dataset
+    N_simulations: 10  # Number of independent runs per condition
+    N_participants: 1  # Number of simulated participants
+    constraints:   # No constraints (full weight matrix)
+    dim_reduction_method:   # No dimensionality reduction
+    data_generating_model_regularization: L1  # Use L1 for data generation
+    candidate_model_regularization: L1  # Use L1 for candidate models
+  include_additional_models: False  # Only use base models, not new_models
+
+
+
+# =============================================================================
+# EXPERIMENT: full_W_PCA_500
+# =============================================================================
+# Tests model recovery with PCA dimensionality reducted features to 500 dimensions.
+# Key features:
+# - PCA reduction to 500 dimensions
+# - Extensive dataset size range (18 different sizes)
+# - 30 simulations per condition for robust statistics
+# - No regularization (uses default eye_distance)
+# =============================================================================
+"full_W_PCA_500":
+  paths:
+    data_generating_models: "Data/models_data_generating/PCA_500/full_W"
+    data_generating_features_folder: "Data/models_features/models_original_features/PCA_500"
+    reference_models_features_folder: "Data/models_features/models_original_features/PCA_500" 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "full_W_PCA_500"  
+
+  experiment:
+    N_train_triplets_list: [
+                            50,
+                            100,
+                            200,
+                            400,
+                            800,
+                            1600,
+                            3200,
+                            6400,
+                            12800,
+                            25600,
+                            51200,
+                            102400,
+                            204800,
+                            409600,
+                            819200,
+                            1638400,
+                            3276800,
+                            4200000
+                            ]
+    N_concepts: 1854
+    N_simulations: 30  
+    constraints: 
+    dim_reduction_method: "PCA_500"  # Apply PCA to reduce to 500 dimensions
+    data_generating_model_regularization: 
+    candidate_model_regularization: 
+    include_additional_models: False
+
+# =============================================================================
+# EXPERIMENT: full_W_30_models
+# =============================================================================
+# This experiment is a an extedned version of our main experimnent after we added 10 additional models for later grouped analysis (Figure S4 and S5).
+# It tests model recovery performance using all 30 models (20 base + 10 additional)
+# comparison across architectures and training objectives.
+#
+# Key features:
+# - Includes all 30 models (20 base + 10 additional)
+# - Tests 10 different dataset sizes
+# - 10 simulations per condition
+# - No constraints or dimensionality reduction
+# =============================================================================
+"full_W_30_models":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/full_W"
+    data_generating_features_folder: Data/models_features/models_original_features/full
+    reference_models_features_folder: Data/models_features/models_original_features/full 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "full_W_30_models"  
+  experiment: 
+    N_train_triplets_list: [
+                            100,
+                            400,
+                            1600,
+                            6400,
+                            25600,
+                            51200,
+                            204800,
+                            819200,
+                            1638400,
+                            4200000
+                            ]
+    N_concepts: 1854
+    N_simulations: 10
+    constraints: 
+    dim_reduction_method: 
+    data_generating_model_regularization: 
+    candidate_model_regularization: 
+    include_additional_models: True  # Use both base models and new_models
+
+
+# =============================================================================
+# EXPERIMENT: full_W
+# =============================================================================
+# Standard full weight matrix experiment with comprehensive dataset size sweep.
+# This is the main experiment in opur work
+#
+# Key features:
+# - Full weight matrix (no constraints)
+# - Most comprehensive dataset size range (18 sizes)
+# - 30 simulations per condition for statistical power
+# - Uses default eye_distance regularization
+# =============================================================================
+"full_W":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/full_W"
+    data_generating_features_folder: Data/models_features/models_original_features/full
+    reference_models_features_folder: Data/models_features/models_original_features/full 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "full_W"  
+
+  experiment: 
+    N_train_triplets_list: [
+                            50,
+                            100,
+                            200,
+                            400,
+                            800,
+                            1600,
+                            3200,
+                            6400,
+                            12800,
+                            25600,
+                            51200,
+                            102400,
+                            204800,
+                            409600,
+                            819200,
+                            1638400,
+                            3276800,
+                            4200000
+                            ]
+    N_simulations: 30
+    constraints: 
+    dim_reduction_method: 
+    data_generating_model_regularization: 
+    candidate_model_regularization: 
+    include_additional_models: False
+
+
+
+# =============================================================================
+# EXPERIMENT: zero_shot
+# =============================================================================
+# Tests zero-shot learning constraints where the weight matrix is constrained
+# to be the identity matrix (no learning of transformation).
+#
+# Key features:
+# - Zero-shot constraint (W = I, no transformation learning)
+# - Tests if models can be distinguished without learned transformations
+# - 4 dataset sizes
+# - 10 simulations per condition
+# =============================================================================
+"zero_shot":
+    paths:
+      data_generating_models: "Data/models_data_generating/full/zero_shot"
+      data_generating_features_folder: Data/models_features/models_original_features/full
+      reference_models_features_folder: Data/models_features/models_original_features/full 
+      triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+      results_folder: "Results/Simulations_experiments/"
+      results_file_name: "zero_shot"  
+    experiment:
+      N_train_triplets_list: [
+                              400,
+                              25600,
+                              204800,
+                              1638400,
+                              ]
+      N_concepts: 1854
+      N_simulations: 10
+      constraints: "zero_shot"  # Constrain W to identity matrix
+      dim_reduction_method: 
+      data_generating_model_regularization: 
+      candidate_model_regularization: 
+      include_additional_models: False
+
+# =============================================================================
+# EXPERIMENT: diagonal
+# =============================================================================
+# Tests diagonal weight matrix constraint where only diagonal elements can
+# be non-zero. This allows feature-wise scaling but no mixing.
+#
+# Key features:
+# - Diagonal constraint (W is diagonal, only feature scaling allowed)
+# - Tests importance of cross-feature transformations
+# - 4 dataset sizes
+# - 10 simulations per condition
+# =============================================================================
+"diagonal":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/diagonal"
+    data_generating_features_folder: Data/models_features/models_original_features/full
+    reference_models_features_folder: Data/models_features/models_original_features/full 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "diagonal"  
+  experiment:
+    N_train_triplets_list: [
+                            400,
+                            25600,
+                            204800,
+                            1638400,
+    ]
+    N_concepts: 1854
+    N_simulations: 10
+    N_participants: 1
+    K_folds: 3
+    constraints: "diagonal"  # Constrain W to be diagonal
+    dim_reduction_method: 
+    data_generating_model_regularization: 
+    candidate_model_regularization: 
+    include_additional_models: False
+
+# =============================================================================
+# EXPERIMENT: rectangular_30
+# =============================================================================
+# Tests rectangular (low-rank) weight matrix constraint where the transformation
+# projects to a lower-dimensional space (30 dimensions) and back.
+#
+# Key features:
+# - Rectangular constraint (W = U @ V where U is d×30 and V is 30×d)
+# - Forces low-rank approximation (rank 30)
+# - Tests if 30-dimensional bottleneck is sufficient
+# - 4 dataset sizes
+# - 10 simulations per condition
+# =============================================================================
+"rectangular_30":
+  paths:
+    data_generating_models: "Data/models_data_generating/full/rectangular_30"
+    data_generating_features_folder: Data/models_features/models_original_features/full
+    reference_models_features_folder: Data/models_features/models_original_features/full 
+    triplets_to_exclude: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_all.pt"
+    results_folder: "Results/Simulations_experiments/"
+    results_file_name: "rectangular_30"  
+  experiment:
+    N_train_triplets_list: [
+                            400,
+                            25600,
+                            204800,
+                            1638400,
+    ]
+    N_concepts: 1854
+    N_simulations: 10
+    constraints: ("rectangular", 30)  # Rectangular constraint with rank 30
+    dim_reduction_method: 
+    data_generating_model_regularization: 
+    candidate_model_regularization:   
+    include_additional_models: False    
+
+
+

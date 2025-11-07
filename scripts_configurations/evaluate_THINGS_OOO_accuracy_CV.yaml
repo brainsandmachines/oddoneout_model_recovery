@@ -1,0 +1,224 @@
+# =============================================================================
+# EVALUATION CONFIGURATION: THINGS Odd-One-Out Model-Behavior Alignment
+# =============================================================================
+#
+# This configuration file controls the evaluation of neural network models on
+# the THINGS odd-one-out dataset, implementing the evaluation procedure from:
+#
+#
+# Purpose:
+#   Evaluate how well different neural network representations predict human
+#   similarity judgments when aligned using linear transformations. The script
+#   tests multiple regularization methods and transformation constraints.
+#
+# Usage:
+#   python analysis_scripts/evaluate_THINGS_OOO_accuracy_CV.py
+#
+# Override settings:
+#   python analysis_scripts/evaluate_THINGS_OOO_accuracy_CV.py k_folds=5
+#   python analysis_scripts/evaluate_THINGS_OOO_accuracy_CV.py used_additional_models=True
+#
+# =============================================================================
+
+defaults:
+  - shared_args  # Import shared model lists from shared_args.yaml
+
+# =============================================================================
+# PATH CONFIGURATION
+# =============================================================================
+# Defines locations for input data (THINGS triplets, features) and outputs
+
+paths:
+  # --- Input Data Paths ---
+  # Training data: 4.5M human odd-one-out judgments from THINGS dataset
+  train_triplets: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_train_set.pt"
+  train_answers: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_train_set.pt"
+  
+  # Test data: Noise ceiling set with multiple participants per triplet
+  # Used for estimating human inter-rater agreement (noise ceiling ≈ 67.8%)
+  test_triplets: "Data/Things_data_preprocessed/Things_odd_one_out_triplets_testset2_noise_ceiling.pt"
+  test_answers: "Data/Things_data_preprocessed/Things_odd_one_out_answers_positions_testset2_noise_ceiling.pt"
+  
+  # Pre-extracted model features: Each file contains 1854 x feature_dim tensor
+  # Features are extracted from the final representational layer of each model
+  features_dir: "Data/models_features/models_original_features/"
+  
+  # Cross-validation partitions: Saved fold assignments for reproducibility
+  # Each fold defines disjoint image sets for train/val/test
+  partitions_dir: "Data/Things_data_preprocessed/partitions_folds"
+  
+  # --- Output Paths ---
+  # Results will be saved in subdirectories organized by feature_type and constraint
+  # 
+  # IMPORTANT: The directory name convention for mixed regularization comparisons:
+  # This path is used when evaluating MULTIPLE regularization types (default: L2 + eye_distance)
+  results_out: "Results/regularization_methods_compare_all_models_eye_distance"
+  # 
+  # The directory will contain separate CSV files for EACH regularization type:
+  #   - best_test_acc_L2_full_full_W.csv
+  #   - best_test_acc_eye_distance_full_full_W.csv
+  #   - best_test_acc_for_each_model_full_full_W.csv (combined comparison)
+  #
+  # Naming convention:
+  #   - For comparing multiple regularization types: Use primary/default reg in suffix
+  #   - For single regularization only: Use that regularization in suffix
+  #     Example: "Results/regularization_methods_compare_all_models_L2" (L2 only)
+  #
+  # The complete output structure:
+  #   {results_out}/{feature_type}/{constraint_type}/
+  #   Example: Results/regularization_methods_compare_all_models_eye_distance/full/full_W/
+  #            Contains files for ALL reg_func_types specified below
+
+
+# =============================================================================
+# TRANSFORMATION CONSTRAINTS
+# =============================================================================
+# Each constraint controls the structure of the transformation matrix W that
+# maps model features to behavior-aligned representations: X_aligned = X @ W
+#
+# Constraint Types:
+#   - null (full_W): Unconstrained p×p matrix (maximum flexibility)
+#   - "zero_shot": Identity matrix (no learning, W = I)
+#   - "diagonal": Diagonal matrix (independent feature scaling)
+#   - ["Rectangular", k]: Rectangular p×k matrix (dimensionality reduction)
+#
+# The save_predictions flag controls whether probabilistic predictions are
+# saved for downstream analyses.
+# =============================================================================
+
+constraints:
+  # --- Rectangular Constraints (Dimensionality Reduction) ---
+  # W is p×k, projecting features to k dimensions
+  # Lower k = less flexibility, potentially better identifiability
+  rectangular_10:
+    constraint: ["Rectangular", 10]
+    save_predictions: false
+  rectangular_20:
+    constraint: ["Rectangular", 20]
+    save_predictions: false
+  rectangular_30:
+    constraint: ["Rectangular", 30]
+    save_predictions: True    # Save for analysis
+  rectangular_40:
+    constraint: ["Rectangular", 40]
+    save_predictions: false
+  rectangular_50:
+    constraint: ["Rectangular", 50]
+    save_predictions: false
+  rectangular_60:
+    constraint: ["Rectangular", 60]
+    save_predictions: false
+  rectangular_70:
+    constraint: ["Rectangular", 70]
+    save_predictions: false
+  rectangular_80:
+    constraint: ["Rectangular", 80]
+    save_predictions: false
+  rectangular_90:
+    constraint: ["Rectangular", 90]
+    save_predictions: false
+  rectangular_100:
+    constraint: ["Rectangular", 100]
+    save_predictions: false
+  
+  # --- Full Transformation Matrix ---
+  # Unconstrained p×p matrix (used in main paper results)
+  # Maximum flexibility: can perform arbitrary linear transformations
+  full_W:
+    constraint: null
+    save_predictions: True    # Save for model recovery simulations
+  
+  # --- Zero-Shot Baseline ---
+  # W = Identity matrix (no learning)
+  # Tests model's original representations without alignment
+  zero_shot:
+    constraint: "zero_shot"
+    save_predictions: True    # Save for comparison with aligned predictions
+  
+  # --- Diagonal Constraint ---
+  # W is diagonal (feature-wise scaling only)
+  # Less flexible than full_W but more than rectangular
+  diagonal:
+    constraint: "diagonal"
+    save_predictions: True    # Save for flexibility analysis
+
+# =============================================================================
+# FEATURE CONFIGURATION
+# =============================================================================
+# Specifies which feature representations to evaluate
+#
+# Options:
+#   - "full": Original model features (dimensionality varies by model)
+#   - "PCA_500": Top 500 principal components (standardized dimensionality)
+#
+# Note: PCA_500 was used to test whether dimensionality differences between
+# models affect identifiability (see Figure S3 in supplementary materials)
+# =============================================================================
+
+feature_types: ["full"]  # Can also include "PCA_500"
+
+# =============================================================================
+# CROSS-VALIDATION CONFIGURATION
+# =============================================================================
+# Controls how data is split for evaluation
+#
+# k_folds: Number of cross-validation folds
+#   Each fold uses DISJOINT IMAGE SETS (not just different triplets)
+#   - Fold 1: Train on images 0-1235, test on images 1236-1853
+#   - Fold 2: Train on images 0-617 + 1236-1853, test on images 618-1235
+#   - Fold 3: Train on images 618-1853, test on images 0-617
+#   This ensures generalization to novel images, not just novel triplets
+# =============================================================================
+
+k_folds: 3  # 3-fold CV as described in paper Section 2.2
+
+# =============================================================================
+# MODEL SELECTION
+# =============================================================================
+# Controls which models to evaluate
+#
+# used_additional_models: Boolean flag
+#   - False: Use only base 20 models (main paper results)
+#   - True: Include additional 10 models (extended analysis in Figure S4)
+#
+# Model lists are defined in shared_args.yaml:
+#   - models: Base 20 models (diverse architectures and training objectives)
+#   - additional_models: Extended set of 10 models (mostly image-text aligned)
+# =============================================================================
+
+used_additional_models: False
+
+# =============================================================================
+# REGULARIZATION CONFIGURATION
+# =============================================================================
+# Defines regularization methods and hyperparameters for fitting W
+#
+# reg_cons: List of regularization constants (λ) to evaluate
+#   Logarithmically spaced from 1e-6 to 10
+#   Larger λ → more regularization → simpler W
+#
+# reg_func_types: Regularization function types
+#   - "L2": Standard Frobenius norm ||W||²_F
+#   - "eye_distance": Scalar-matrix shrinkage ||W - γI||²_F (Eq. 4 in paper)
+#
+# The optimal λ is selected via cross-validation to maximize test accuracy.
+# Different regularization methods can yield different best-fitting models,
+# demonstrating the sensitivity of model comparison to regularization choice.
+# =============================================================================
+
+reg_cons: [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10]
+reg_func_types: ["L2", "eye_distance"]
+
+# =============================================================================
+# DATASET PARAMETERS
+# =============================================================================
+# Fixed properties of the THINGS dataset
+
+N_concepts: 1854  # Total number of unique images/concepts in THINGS
+random_seed: 42   # Seed for reproducible fold creation
+
+# =============================================================================
+# COMPUTE CONFIGURATION
+# =============================================================================
+
+device: "cuda"  # Will automatically fall back to CPU if CUDA unavailable

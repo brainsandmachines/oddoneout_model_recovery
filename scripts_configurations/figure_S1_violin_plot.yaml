@@ -1,0 +1,180 @@
+# =============================================================================
+# Configuration for Figure S1: Violin Plot (Regularization Comparison)
+# =============================================================================
+#
+# This configuration file controls the generation of Figure S1, which compares
+# the performance of different regularization methods (L2 vs. Scalar Matrix
+# Shrinkage) across various transformation flexibility constraints.
+#
+# The figure includes:
+# - Violin plots showing test accuracy distributions by constraint type
+# - TOST (Two One-Sided Tests) statistical analysis for equivalence testing
+#
+# =============================================================================
+
+defaults:
+  - shared_args  # Import shared model lists and configurations
+
+# =============================================================================
+# Data Paths and File Settings
+# =============================================================================
+
+# Main folder containing regularization comparison results
+features_path: "Results/regularization_methods_compare_all_models_eye_distance"
+
+# Base name for CSV files containing best test accuracy results
+base_results_name: "best_test_acc_for_each_model"
+
+# Feature type to analyze (full dimensional features)
+features_type: "full"
+
+# Output directory for plots
+save_path: "Plots/"
+
+# Output directory for TOST statistical analysis results
+tost_output_path: "Results/regularization_methods_compare"
+
+# =============================================================================
+# Statistical Analysis Settings
+# =============================================================================
+
+# TOST (Two One-Sided Tests) parameters
+tost_params:
+  # Significance level (family-wise error rate)
+  # This will be Bonferroni-corrected across multiple constraints
+  alpha: 0.05
+  
+  # Equivalence margin (epsilon) values to test
+  # Multiple epsilon values will be tested to assess sensitivity
+  epsilon_values: [0.05]  # 5% equivalence margin
+  
+  # Bootstrap settings
+  bootstrap:
+    # Whether to use bootstrap estimation for p-values
+    enabled: True
+    
+    # Number of bootstrap resamples
+    n_bootstrap: 10000
+
+# =============================================================================
+# Constraint Names and Filtering
+# =============================================================================
+
+# Models to exclude from analysis
+excluded_models:
+  - "MoCo_V2_RN50"  # Removed from the study
+
+# Constraint types to exclude
+excluded_constraints:
+  - "zero_shot"  # Zero-shot doesn't use regularization
+
+# Model name patterns to filter out
+excluded_patterns:
+  - "ZS"  # Zero-shot model variants
+
+# =============================================================================
+# Visualization Settings
+# =============================================================================
+
+# Figure dimensions (in centimeters)
+figure_size:
+  width_cm: 20  # Width: 20 cm (converted to ~7.87 inches)
+  height_cm: 13  # Height: 13 cm (converted to ~5.12 inches)
+
+# Violin plot settings
+violin_plot:
+  # Whether to split violins by regularization type
+  split: True
+  
+  # Inner representation of quartiles
+  inner: "quartile"
+  
+  # Font sizes
+  xlabel_fontsize: 10
+  ylabel_fontsize: 10
+  xlabel_fontweight: "bold"
+  ylabel_fontweight: "bold"
+  legend_fontsize: 8
+  xticklabels_fontsize: 7
+  
+  # Tick rotation
+  xtick_rotation: 45
+  xtick_ha: "right"
+
+# =============================================================================
+# LaTeX Formatting for Labels
+# =============================================================================
+
+# Regularization type labels (LaTeX formatted)
+regularization_labels:
+  L2: "$\\mathcal{R}(\\mathbf{W}) = ||\\mathbf{W}||_F^2$"
+  eye_distance: "$\\mathcal{R}(\\mathbf{W}) = ||\\mathbf{W}-\\gamma I||_F^2$"
+
+# Constraint type labels (LaTeX formatted)
+constraint_labels:
+  diagonal: "$(\\mathbf{W} \\in diag(\\mathbb{R}^{p \\times p}))$"
+  Rectangular_10: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 10})$"
+  Rectangular_20: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 20})$"
+  Rectangular_30: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 30})$"
+  Rectangular_40: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 40})$"
+  Rectangular_50: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 50})$"
+  Rectangular_60: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 60})$"
+  Rectangular_70: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 70})$"
+  Rectangular_80: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 80})$"
+  Rectangular_90: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 90})$"
+  Rectangular_100: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times 100})$"
+  full_W: "$(\\mathbf{W} \\in \\mathbb{R}^{p \\times p})$"
+
+# Axis labels
+axis_labels:
+  xlabel: "flexibility"
+  ylabel: "test accuracy"
+
+# =============================================================================
+# Output File Settings
+# =============================================================================
+
+# Output filenames
+output_files:
+  # Violin plot filename
+  violin_plot: "S1_violin_plot.pdf"
+  
+  # DPI for saved figure
+  dpi: 600
+  
+  # Combined DataFrame filename (automatically generated)
+  combined_df_filename: "best_test_acc_for_each_model_full.csv"
+  
+  # TOST summary filename pattern (will include epsilon and bootstrap flag)
+  tost_summary_pattern: "tost_summary_eps{epsilon}{bootstrap_suffix}.csv"
+
+# =============================================================================
+# Data Processing Settings
+# =============================================================================
+
+# Whether to recreate combined DataFrame even if it exists
+create_new_df: False
+
+# Random seed for reproducibility
+random_seed: 0
+
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# Constraint Ordering:
+# The constraints are sorted in order of increasing flexibility:
+# 1. diagonal: Element-wise scaling only (least flexible)
+# 2. Rectangular_k: Low-rank projections (k = 10, 20, ..., 100)
+# 3. full_W: Unconstrained transformation matrix (most flexible)
+#
+# Regularization Types:
+# - L2: Standard Frobenius norm regularization
+# - eye_distance: Scalar matrix shrinkage (distance from scaled identity)
+#
+# Statistical Testing:
+# TOST is used to test equivalence (rather than difference) between
+# regularization methods. If both one-sided tests reject, the methods
+# are considered statistically equivalent within the epsilon margin.
+#
+# =============================================================================
