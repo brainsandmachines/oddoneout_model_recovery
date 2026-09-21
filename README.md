@@ -10,13 +10,22 @@ Official code repository for the NeurIPS 2025 paper ["Model-Behavior Alignment u
 ## 📝 Citation
 
 ```latex
-@inproceedings{avitan2025modelbehavior,
-  author    = {Avitan, Itamar and Golan, Tal},
-  title     = {Model-Behavior Alignment under Flexible Evaluation: When the Best-Fitting Model Isn't the Right One},
-  booktitle = {The Thirty-ninth Annual Conference on Neural Information Processing Systems},
-  year      = {2025},
-  url={https://openreview.net/forum?id=kE4XEY7Bbc}
+@inproceedings{avitan2025model,
+  title = {Model–{{Behavior Alignment}} under {{Flexible Evaluation}}: {{When}} the {{Best-Fitting Model Isn}}’t the {{Right One}}},
+  shorttitle = {Model–{{Behavior Alignment}} under {{Flexible Evaluation}}},
+  booktitle = {Advances in {{Neural Information Processing Systems}} 38},
+  author = {Avitan, Itamar and Golan, Tal},
+  date = {2025},
+  pages = {13447--13486},
+  publisher = {Neural Information Processing Systems Foundation, Inc. (NeurIPS)},
+  location = {San Diego, California, USA and Mexico City, Mexico},
+  doi = {10.52202/085713-0404},
+  url = {http://www.proceedings.com/085713-0404.html},
+  urldate = {2026-09-21},
+  eventtitle = {Advances in {{Neural Information Processing Systems}} 38},
+  isbn = {979-8-3313-3827-5}
 }
+
 ```
 
 
